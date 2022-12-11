@@ -53,7 +53,6 @@ public class Contact extends HttpServlet {
             contact_json.contact_id = generatedContactId;
 
             String responseJson = new Gson().toJson(contact_json);
-
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
             response.getWriter().write(responseJson);
@@ -116,8 +115,6 @@ public class Contact extends HttpServlet {
         ContactMethods contactMethods = new ContactMethods();
         CommonMethods commonMethods = new CommonMethods();
 
-        long contact_id = commonMethods.parseId(request);
-
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
         Filters filters = new Filters();
@@ -128,8 +125,7 @@ public class Contact extends HttpServlet {
             response.getWriter().println("Invalid data passed !");
             return;
         }
-
-        contact_json.contact_id = contact_id;
+        contact_json.contact_id = commonMethods.parseId(request);
 
         if(contactMethods.updateContact(contact_json) == 0)
         {
