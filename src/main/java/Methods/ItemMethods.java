@@ -23,6 +23,7 @@ public class ItemMethods
             statement.executeUpdate();
 
             ResultSet set = statement.getGeneratedKeys();
+            connection.close();
 
             if(set.next())
             {
@@ -68,6 +69,7 @@ public class ItemMethods
                 item_jsons[i].item_quantity = rs.getInt("item_quantity");
             }
 
+            connection.close();
             return item_jsons;
         }
         catch (SQLException e)
@@ -99,6 +101,8 @@ public class ItemMethods
                 item_json.item_quantity = rs.getInt("item_quantity");
             }
 
+            connection.close();
+
             return item_json;
         }
         catch (SQLException e)
@@ -117,7 +121,10 @@ public class ItemMethods
             PreparedStatement statement = connection.prepareStatement("DELETE FROM items WHERE item_id = ?");
             statement.setLong(1, item_id);
 
-            return statement.executeUpdate();
+            int affectedRows = statement.executeUpdate();
+            connection.close();
+
+            return affectedRows;
         }
         catch (SQLException e)
         {
@@ -162,7 +169,10 @@ public class ItemMethods
         {
             PreparedStatement statement = connection.prepareStatement(query.toString());
 
-            return statement.executeUpdate();
+            int affected_rows = statement.executeUpdate();
+            connection.close();
+
+            return affected_rows;
         }
         catch(SQLException e)
         {

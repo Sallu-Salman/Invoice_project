@@ -31,12 +31,16 @@ public class ContactMethods
                 contact_json.contact_phone = rs.getString("contact_phone");
             }
 
+            connection.close();
+
             return contact_json;
         }
         catch (SQLException e)
         {
             throw new RuntimeException(e);
         }
+
+
     }
 
     public Contact_json[] getContactsDetails()
@@ -68,6 +72,7 @@ public class ContactMethods
                 contact_jsons[i].contact_email = rs.getString("contact_email");
                 contact_jsons[i].contact_phone = rs.getString("contact_phone");
             }
+            connection.close();
 
             return contact_jsons;
         }
@@ -93,6 +98,7 @@ public class ContactMethods
             statement.executeUpdate();
 
             ResultSet set = statement.getGeneratedKeys();
+            connection.close();
 
             if(set.next())
             {
@@ -118,8 +124,10 @@ public class ContactMethods
         {
             PreparedStatement statement = connection.prepareStatement("DELETE FROM contacts WHERE contact_id = ?");
             statement.setLong(1, contact_id);
+            int affected_rows = statement.executeUpdate();
 
-            return statement.executeUpdate();
+            connection.close();
+            return affected_rows;
         }
         catch (SQLException e)
         {
@@ -164,8 +172,10 @@ public class ContactMethods
         try
         {
             PreparedStatement statement = connection.prepareStatement(query.toString());
+            int affected_rows = statement.executeUpdate();
+            connection.close();
 
-            return statement.executeUpdate();
+            return affected_rows;
         }
         catch(SQLException e)
         {
