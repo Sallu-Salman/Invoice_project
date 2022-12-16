@@ -716,9 +716,11 @@ public class InvoiceMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
+            int sales = 0;
+            int cost_of_goods_sold = 0;
 
             while (set.next())
             {
@@ -727,9 +729,102 @@ public class InvoiceMethods
                     response.getWriter().println("Only Invoice in Draft state can be marked as Sent");
                     return;
                 }
+                sales = set.getInt("total_cost");
             }
 
-            //Steps noted in note
+            //Getting quantity of each line item
+
+            statement = connection.prepareStatement("SELECT item_id, item_quantity FROM line_items where invoice_id = ?;");
+            statement.setLong(1, invoice_id);
+            set = statement.executeQuery();
+
+            HashMap<Long, Integer> itemQuantityInInvoice = new HashMap<Long, Integer>();
+
+            while (set.next())
+            {
+                int quantity = set.getInt("item_quantity");
+
+                if(itemQuantityInInvoice.containsKey(set.getLong("item_id")))
+                {
+                    quantity += itemQuantityInInvoice.get("item_id");
+                    itemQuantityInInvoice.remove(set.getLong("item_id"));
+                }
+
+                itemQuantityInInvoice.put(set.getLong("item_id"), quantity);
+            }
+
+            //Reduce the item quantity in items table
+
+            StringBuilder itemQuery = new StringBuilder("UPDATE items SET item_quantity = CASE item_id ");
+            StringBuilder reducedItemIds = new StringBuilder();
+            boolean reducedIdKey = true;
+
+            for(long item_id : itemQuantityInInvoice.keySet())
+            {
+                itemQuery.append(" WHEN " + item_id + " THEN item_quantity - " + itemQuantityInInvoice.get(item_id));
+                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+
+                reducedItemIds.append(item_id);
+            }
+
+            itemQuery.append(" ELSE item_quantity END WHERE item_id IN ( " + reducedItemIds+" );");
+
+            statement = connection.prepareStatement(itemQuery.toString());
+            statement.executeUpdate();
+
+            //Getting current stock rate of each line item
+
+            statement = connection.prepareStatement("SELECT item_id, stock_rate FROM items WHERE item_id IN ( " + reducedItemIds + " );");
+            set = statement.executeQuery();
+
+            HashMap<Long, Integer> itemIdStockRate = new HashMap<Long, Integer>();
+
+            while(set.next())
+            {
+                itemIdStockRate.put(set.getLong("item_id"), set.getInt("stock_rate"));
+            }
+
+            //Update current stock rate to each line item
+
+            itemQuery = new StringBuilder("UPDATE line_items SET stock_rate = CASE item_id ");
+
+            for(long item_id : itemIdStockRate.keySet())
+            {
+                itemQuery.append(" WHEN " + item_id + " THEN " + itemIdStockRate.get(item_id));
+
+                cost_of_goods_sold += (itemIdStockRate.get(item_id)*itemQuantityInInvoice.get(item_id));
+            }
+
+            itemQuery.append(" ELSE stock_rate END WHERE item_id IN ( " + reducedItemIds+" );");
+
+            statement = connection.prepareStatement(itemQuery.toString());
+            statement.executeUpdate();
+
+            //Update chart of accounts
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Inventory asset';");
+            statement.setInt(1, cost_of_goods_sold);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Cost of Goods Sold';");
+            statement.setInt(1, cost_of_goods_sold);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Sales';");
+            statement.setInt(1, sales);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, sales);
+            statement.executeUpdate();
+
+            //Update invoice status as 'Sent'
+
+            statement = connection.prepareStatement("UPDATE invoices SET status = 'SENT' where invoice_id = ? ;");
+            statement.setLong(1, invoice_id);
+            statement.executeUpdate();
+
+            response.getWriter().println("Invoice marked as 'SENT'");
 
         }
         catch (SQLException e)
@@ -777,7 +872,7 @@ public class InvoiceMethods
 
         if(status.equals("sent"))
         {
-            response.getWriter().println("sending");
+            InvoiceMethods.markAsSent(request, response);
         }
         else if(status.equals("draft"))
         {
