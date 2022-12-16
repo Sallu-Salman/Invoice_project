@@ -14,21 +14,31 @@ public class ItemMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO items(item_name, item_cost, item_quantity) VALUES (?,?,?);", Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO items(item_name, item_cost, item_quantity, stock_rate) VALUES (?,?,?,?);", Statement.RETURN_GENERATED_KEYS);
 
             statement.setString(1, item_json.item_name);
             statement.setInt(2, item_json.item_cost);
             statement.setInt(3, item_json.item_quantity);
+            statement.setInt(4, item_json.stock_rate);
 
             statement.executeUpdate();
 
             ResultSet set = statement.getGeneratedKeys();
-            connection.close();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Inventory asset';");
+            statement.setInt(1, (item_json.stock_rate* item_json.item_quantity));
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Owners Equity';");
+            statement.setInt(1, (item_json.stock_rate* item_json.item_quantity));
+            statement.executeUpdate();
 
             if(set.next())
             {
                 return set.getLong(1);
             }
+
+            connection.close();
 
             return -1;
 
@@ -67,6 +77,7 @@ public class ItemMethods
                 item_jsons[i].item_name = rs.getString("item_name");
                 item_jsons[i].item_cost = rs.getInt("item_cost");
                 item_jsons[i].item_quantity = rs.getInt("item_quantity");
+                item_jsons[i].stock_rate = rs.getInt("stock_rate");
             }
 
             connection.close();
@@ -99,6 +110,7 @@ public class ItemMethods
                 item_json.item_name = rs.getString("item_name");
                 item_json.item_cost = rs.getInt("item_cost");
                 item_json.item_quantity = rs.getInt("item_quantity");
+                item_json.stock_rate = rs.getInt("stock_rate");
             }
 
             connection.close();
@@ -116,12 +128,38 @@ public class ItemMethods
         CommonMethods commonMethods = new CommonMethods();
         Connection connection =  commonMethods.createConnection();
 
+        int old_quantity = 0;
+        int old_stock_rate = 0;
+        int old_total_value = 0;
+
         try
         {
-            PreparedStatement statement = connection.prepareStatement("DELETE FROM items WHERE item_id = ?");
+            PreparedStatement statement = connection.prepareStatement("SELECT item_quantity, stock_rate FROM items WHERE item_id = ?");
+            statement.setLong(1, item_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                old_quantity = set.getInt("item_quantity");
+                old_stock_rate = set.getInt("stock_rate");
+
+                old_total_value = old_quantity * old_stock_rate;
+            }
+
+            statement = connection.prepareStatement("DELETE FROM items WHERE item_id = ?");
             statement.setLong(1, item_id);
 
             int affectedRows = statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - "+old_total_value+" WHERE account_name = 'Owners Equity';");
+
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - "+old_total_value+"  WHERE account_name = 'Inventory asset';");
+
+            statement.executeUpdate();
+
             connection.close();
 
             return affectedRows;
@@ -142,34 +180,89 @@ public class ItemMethods
         StringBuilder query = new StringBuilder("UPDATE items SET ");
         boolean key = true;
 
-        if(item_json.item_name != null)
-        {
-            key = commonMethods.conjunction(key, query);
+        int old_quantity = 0;
+        int old_stock_rate = 0;
+        int old_total_value = 0;
 
-            query.append(" item_name = '"+item_json.item_name + "' ");
-        }
+        int new_total_value = 0;
 
-        if(item_json.item_cost >= 0)
-        {
-            key = commonMethods.conjunction(key, query);
-
-            query.append(" item_cost = '"+item_json.item_cost + "' ");
-        }
-
-        if(item_json.item_quantity >= 0)
-        {
-            commonMethods.conjunction(key, query);
-
-            query.append(" item_quantity = '" + item_json.item_quantity + "' ");
-        }
-
-        query.append(" WHERE item_id = "+item_json.item_id + " ;");
+        boolean isQuantityChanged = false;
+        boolean isStockRateChanged = false;
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement(query.toString());
+            PreparedStatement statement = connection.prepareStatement("SELECT item_quantity, stock_rate FROM items WHERE item_id = ?");
+            statement.setLong(1, item_json.item_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                old_quantity = set.getInt("item_quantity");
+                old_stock_rate = set.getInt("stock_rate");
+
+                old_total_value = old_quantity * old_stock_rate;
+            }
+
+            if(item_json.item_name != null)
+            {
+                key = commonMethods.conjunction(key, query);
+
+                query.append(" item_name = '"+item_json.item_name + "' ");
+            }
+
+            if(item_json.item_cost >= 0)
+            {
+                key = commonMethods.conjunction(key, query);
+
+                query.append(" item_cost = "+item_json.item_cost );
+            }
+
+            if(item_json.item_quantity >= 0)
+            {
+                key = commonMethods.conjunction(key, query);
+
+                query.append(" item_quantity = " + item_json.item_quantity);
+
+                new_total_value = (old_total_value/old_quantity) * item_json.item_quantity;
+
+                isQuantityChanged = true;
+            }
+
+            if(item_json.stock_rate >=  0)
+            {
+                commonMethods.conjunction(key, query);
+
+                query.append(" stock_rate = " + item_json.stock_rate);
+
+                new_total_value = (old_total_value/old_stock_rate) * item_json.stock_rate;
+
+                isStockRateChanged = true;
+            }
+
+            query.append(" WHERE item_id = "+item_json.item_id + " ;");
+
+
+            statement = connection.prepareStatement(query.toString());
 
             int affected_rows = statement.executeUpdate();
+
+            if(isQuantityChanged && isStockRateChanged)
+            {
+                new_total_value = (item_json.stock_rate * item_json.item_quantity);
+            }
+
+            if(isQuantityChanged || isStockRateChanged)
+            {
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - "+old_total_value+" + "+new_total_value+" WHERE account_name = 'Owners Equity';");
+
+                statement.executeUpdate();
+
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - "+old_total_value+" + "+new_total_value+" WHERE account_name = 'Inventory asset';");
+
+                statement.executeUpdate();
+            }
+
             connection.close();
 
             return affected_rows;

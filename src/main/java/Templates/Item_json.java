@@ -6,4 +6,6 @@ public class Item_json
     public String item_name;
     public int item_cost;
     public int item_quantity;
+
+    public int stock_rate;
 }

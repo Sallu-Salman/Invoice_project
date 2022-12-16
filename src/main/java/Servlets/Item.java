@@ -32,12 +32,11 @@ public class Item extends HttpServlet
 
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
-        Filters filters = new Filters();
         ItemMethods itemMethods = new ItemMethods();
 
         Item_json item_json = gson.fromJson(reader, Item_json.class);
 
-        if(item_json.item_cost < 0 || item_json.item_quantity < 0)
+        if(item_json.item_cost <= 0 || item_json.item_quantity < 0 || item_json.stock_rate <= 0 )
         {
             response.getWriter().println("Invalid data passed !");
             return;
@@ -104,6 +103,8 @@ public class Item extends HttpServlet
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        Filters filters = new Filters();
+
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
             response.getWriter().println("Invalid URL passed");
@@ -114,6 +115,12 @@ public class Item extends HttpServlet
         CommonMethods commonMethods = new CommonMethods();
 
         long item_id = commonMethods.parseId(request);
+
+        if(!filters.ifItemExists(item_id))
+        {
+            response.getWriter().println("Item does not exits");
+            return;
+        }
 
         if(itemMethods.deleteItem(item_id) == 0)
         {
@@ -144,6 +151,12 @@ public class Item extends HttpServlet
         Item_json item_json = filters.checkAndLoadItem(jsonObject);
 
         item_json.item_id = commonMethods.parseId(request);
+
+        if(!filters.ifItemExists(item_json.item_id))
+        {
+            response.getWriter().println("Item does not exists");
+            return;
+        }
 
         if(itemMethods.updateItem(item_json) == 0)
         {

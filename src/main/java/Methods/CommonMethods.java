@@ -101,6 +101,10 @@ public class CommonMethods
         {
             jsonObject.remove("item_cost");
         }
+        if(jsonObject.getInt("stock_rate") < 0)
+        {
+            jsonObject.remove("stock_rate");
+        }
 
         return jsonObject.toString();
     }

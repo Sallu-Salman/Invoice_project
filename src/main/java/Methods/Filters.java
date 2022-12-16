@@ -138,6 +138,36 @@ public class Filters {
 
     }
 
+    public boolean ifInvoiceExists(long invoice_id)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total from invoices where invoice_id = ?;");
+
+            statement.setLong(1, invoice_id);
+
+            ResultSet rs = statement.executeQuery();
+
+            while(rs.next())
+            {
+                if(rs.getInt("total") == 0)
+                {
+                    return false;
+                }
+            }
+
+            connection.close();
+            return true;
+        }
+        catch (SQLException e)
+        {
+            return false;
+        }
+    }
+
     public boolean ifCustomerExists(long contact_id)
     {
         CommonMethods commonMethods = new CommonMethods();
@@ -148,6 +178,36 @@ public class Filters {
             PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total from contacts where contact_id = ?;");
 
             statement.setLong(1, contact_id);
+
+            ResultSet rs = statement.executeQuery();
+
+            while(rs.next())
+            {
+                if(rs.getInt("total") == 0)
+                {
+                    return false;
+                }
+            }
+
+            connection.close();
+            return true;
+        }
+        catch (SQLException e)
+        {
+            return false;
+        }
+    }
+
+    public boolean ifItemExists(long item_id)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total from items where item_id = ?;");
+
+            statement.setLong(1, item_id);
 
             ResultSet rs = statement.executeQuery();
 
@@ -189,6 +249,15 @@ public class Filters {
         else
         {
             item_json.item_cost = -1;
+        }
+
+        if(jsonObject.has("stock_rate"))
+        {
+            item_json.stock_rate = jsonObject.getInt("stock_rate");
+        }
+        else
+        {
+            item_json.stock_rate = -1;
         }
 
         if(jsonObject.has("item_name"))

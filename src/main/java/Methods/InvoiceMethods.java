@@ -699,6 +699,46 @@ public class InvoiceMethods
         }
     }
 
+    public static void markAsSent(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if(!filters.ifInvoiceExists(invoice_id))
+        {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                if(!set.getString("status").equals("DRAFT"))
+                {
+                    response.getWriter().println("Only Invoice in Draft state can be marked as Sent");
+                    return;
+                }
+            }
+
+            //Steps noted in note
+
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong ! Could not mark as sent");
+        }
+
+    }
+
     public static void invoiceFunctionRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
         String pathInfo = request.getPathInfo();
