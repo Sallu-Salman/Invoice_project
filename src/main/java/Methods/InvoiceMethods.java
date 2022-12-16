@@ -6,12 +6,14 @@ import Templates.Item_json;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import org.apache.commons.validator.GenericValidator;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
@@ -85,6 +87,13 @@ public class InvoiceMethods
                     }
                 }
 
+                itemIdIndexMapper.remove(set.getLong("item_id"));
+
+            }
+
+            if(!itemIdIndexMapper.isEmpty())
+            {
+                return null;
             }
 
             connection.close();
@@ -204,6 +213,16 @@ public class InvoiceMethods
         CommonMethods commonMethods = new CommonMethods();
         Connection connection =  commonMethods.createConnection();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
+        Filters filters = new Filters();
+
+        if(!filters.ifCustomerExists(invoice_json.customer_id))
+        {
+            return -1;
+        }
+        if(invoice_json.salesperson_id != 0 && !filters.ifSalespersonExists(invoice_json.salesperson_id))
+        {
+            return -1;
+        }
 
         String query = invoiceMethods.buildInvoiceQuery(invoice_json);
 
@@ -319,9 +338,14 @@ public class InvoiceMethods
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
+        Filters filters = new Filters();
         Gson gson = new Gson();
         int sub_total = 0;
 
+        if(!filters.ifItemsExists(newLineItems))
+        {
+            return 0;
+        }
 
         try
         {
@@ -352,7 +376,6 @@ public class InvoiceMethods
                 {
                     //NO ID so new Insert
                     addLineItemList.add(gson.fromJson(jsonObject.toString(), Item_json.class));
-                    sub_total += (jsonObject.getInt("item_cost") * jsonObject.getInt("item_quantity"));
                 }
                 else
                 {
@@ -412,7 +435,10 @@ public class InvoiceMethods
 
             if(addLineItemList.size() > 0)
             {
-                invoiceMethods.storeLineItems(invoiceMethods.fetchLineItemsDetails(addLineItemList.toArray(new Item_json[addLineItemList.size()])), invoice_id);
+                Item_json[] insertingLineItems = invoiceMethods.fetchLineItemsDetails(addLineItemList.toArray(new Item_json[addLineItemList.size()]));
+                invoiceMethods.storeLineItems(insertingLineItems, invoice_id);
+                sub_total += invoiceMethods.findSubTotal(insertingLineItems);
+
             }
 
             connection.close();
@@ -426,6 +452,10 @@ public class InvoiceMethods
         {
             return 0;
         }
+        catch (Exception e )
+        {
+            return 0;
+        }
 
         return sub_total;
     }
@@ -435,91 +465,71 @@ public class InvoiceMethods
         CommonMethods commonMethods = new CommonMethods();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         Connection connection = commonMethods.createConnection();
-        Gson gson = new Gson();
+        Filters filters = new Filters();
 
         boolean isTotalChanged = false;
 
-        if(inputJson.has("line_items"))
-        {
-            int sub_total = invoiceMethods.findSubTotal(gson.fromJson(inputJson.getJSONArray("line_items").toString(), Item_json[].class));
-
-            if(sub_total == 0)
-            {
-                return 0;
-            }
-            inputJson.put("sub_total", sub_total);
-            isTotalChanged = true;
-        }
-
-        StringBuilder invoiceUpdateQuery = new StringBuilder("UPDATE invoices SET ");
-        boolean key = true;
-
-        if(inputJson.has("customer_id"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("customer_id = " + inputJson.getLong("cusotmer_id"));
-        }
-        if(inputJson.has("salesperson_id"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("salesperson_id = " + inputJson.getLong("salesperson_id"));
-        }
-        if(inputJson.has("subject"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("subject = '"+inputJson.getString("subject") + "' ");
-        }
-        if(inputJson.has("invoice_date"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("invoice_date = '"+inputJson.getString("invoice_date") + "' ");
-        }
-        if(inputJson.has("terms_and_conditions"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("terms_and_conditions = '"+inputJson.getString("terms_and_conditions") + "' ");
-        }
-        if(inputJson.has("customer_notes"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("customer_notes = '"+inputJson.getString("customer_notes") + "' ");
-        }
-        if(inputJson.has("sub_total"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("sub_total = " + inputJson.getInt("sub_total"));
-        }
-        if(inputJson.has("tax"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("tax = " + inputJson.getInt("tax"));
-            isTotalChanged = true;
-        }
-        if(inputJson.has("discount"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("discount = " + inputJson.getInt("discount"));
-            isTotalChanged = true;
-        }
-        if(inputJson.has("charges"))
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("charges = " + inputJson.getInt("charges"));
-            isTotalChanged = true;
-        }
-        if(isTotalChanged)
-        {
-            key = commonMethods.conjunction(key, invoiceUpdateQuery);
-            invoiceUpdateQuery.append("total_cost = sub_total + tax - discount + charges ");
-        }
-
-        invoiceUpdateQuery.append(" WHERE invoice_id = " + inputJson.getLong("invoice_id") + ";");
-
         try
         {
-            PreparedStatement statement = connection.prepareStatement(invoiceUpdateQuery.toString());
-            int affected_rows = statement.executeUpdate();
 
+            StringBuilder invoiceUpdateQuery = new StringBuilder("UPDATE invoices SET ");
+            boolean key = true;
+
+            if(inputJson.has("customer_id"))
+            {
+                if(!filters.ifCustomerExists(inputJson.getLong("customer_id")))
+                {
+                    return 0;
+                }
+
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("customer_id = " + inputJson.getLong("customer_id"));
+            }
+            if(inputJson.has("salesperson_id"))
+            {
+                if(!filters.ifSalespersonExists(inputJson.getLong("salesperson_id")))
+                {
+                    return 0;
+                }
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("salesperson_id = " + inputJson.getLong("salesperson_id"));
+            }
+
+            if(inputJson.has("subject"))
+            {
+                if(!filters.checkSubject(inputJson.getString("subject")))
+                {
+                    return 0;
+                }
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("subject = '"+inputJson.getString("subject") + "' ");
+            }
+            if(inputJson.has("invoice_date")) {
+                if (!GenericValidator.isDate(inputJson.getString("invoice_date"), "yyyy-MM-dd", true))
+                {
+                    return 0;
+                }
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("invoice_date = '"+inputJson.getString("invoice_date") + "' ");
+            }
+            if(inputJson.has("terms_and_conditions"))
+            {
+                if(!filters.checkTermsAndConditions(inputJson.getString("terms_and_conditions")))
+                {
+                    return 0;
+                }
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("terms_and_conditions = '"+inputJson.getString("terms_and_conditions") + "' ");
+            }
+            if(inputJson.has("customer_notes"))
+            {
+                if(!filters.checkCustomerNotes(inputJson.getString("customer_notes")))
+                {
+                    return 0;
+                }
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("customer_notes = '"+inputJson.getString("customer_notes") + "' ");
+            }
             if(inputJson.has("line_items"))
             {
                 int newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"));
@@ -529,14 +539,57 @@ public class InvoiceMethods
                     return 0;
                 }
 
+                inputJson.put("sub_total", newSubTotal);
+                isTotalChanged = true;
+            }
+            if(inputJson.has("sub_total"))
+            {
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("sub_total = " + inputJson.getInt("sub_total"));
+            }
+            if(inputJson.has("tax"))
+            {
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("tax = " + inputJson.getInt("tax"));
+                isTotalChanged = true;
+            }
+            if(inputJson.has("discount"))
+            {
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("discount = " + inputJson.getInt("discount"));
+                isTotalChanged = true;
+            }
+            if(inputJson.has("charges"))
+            {
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("charges = " + inputJson.getInt("charges"));
+                isTotalChanged = true;
+            }
+            if(isTotalChanged)
+            {
+                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                invoiceUpdateQuery.append("total_cost = sub_total + tax - discount + charges ");
             }
 
+            invoiceUpdateQuery.append(" WHERE invoice_id = " + inputJson.getLong("invoice_id") + ";");
+
+            if(key)
+            {
+                return 0;
+            }
+
+            PreparedStatement statement = connection.prepareStatement(invoiceUpdateQuery.toString());
+            int affected_rows = statement.executeUpdate();
 
             connection.close();
 
             return affected_rows;
         }
         catch(SQLException e)
+        {
+            return 0;
+        }
+        catch(JSONException e)
         {
             return 0;
         }

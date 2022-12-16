@@ -31,7 +31,7 @@ public class Item extends HttpServlet
 
         Item_json item_json = gson.fromJson(reader, Item_json.class);
 
-        if(!filters.checkItem(item_json))
+        if(item_json.item_cost < 0 || item_json.item_quantity < 0)
         {
             response.getWriter().println("Invalid data passed !");
             return;

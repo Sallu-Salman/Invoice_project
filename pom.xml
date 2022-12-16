@@ -41,6 +41,12 @@
       <version>20220320</version>
     </dependency>
 
+    <dependency>
+      <groupId>commons-validator</groupId>
+      <artifactId>commons-validator</artifactId>
+      <version>1.6</version>
+    </dependency>
+
   </dependencies>
   <build>
     <finalName>Invoice</finalName>

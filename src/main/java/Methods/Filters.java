@@ -1,8 +1,12 @@
 package Methods;
 
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.regex.*;
 import Templates.Contact_json;
 import Templates.Item_json;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Filters {
@@ -44,13 +48,126 @@ public class Filters {
         return true;
     }
 
-    public boolean checkItem(Item_json item_json) {
-        if (item_json.item_cost < 0 || item_json.item_quantity < 0) {
+    public boolean ifSalespersonExists(long salesperson_id)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total from salespersons where salesperson_id = ?;");
+
+            statement.setLong(1, salesperson_id);
+
+            ResultSet rs = statement.executeQuery();
+
+            while(rs.next())
+            {
+                if(rs.getInt("total") == 0)
+                {
+                    return false;
+                }
+            }
+
+            connection.close();
+            return true;
+        }
+        catch (SQLException e)
+        {
+            return false;
+        }
+    }
+
+    public boolean ifItemsExists(JSONArray newLineItems)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        HashSet<Long> item_ids = new HashSet<Long>();
+
+        StringBuilder query = new StringBuilder("SELECT COUNT(*) as total FROM items WHERE item_id IN (");
+        boolean key = true;
+
+        for(int i=0; i<newLineItems.length(); i++)
+        {
+            JSONObject jsonObject = newLineItems.getJSONObject(i);
+
+            if(jsonObject.length() == 0)
+            {
+                return false;
+            }
+
+            if(jsonObject.has("line_item_id"))
+            {
+                continue;
+            }
+
+            key = commonMethods.conjunction(key, query);
+            query.append(jsonObject.getLong("item_id"));
+            item_ids.add(jsonObject.getLong("item_id"));
+        }
+
+        query.append(");");
+
+        if(item_ids.size() == 0)
+        {
+            return true;
+        }
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement(query.toString());
+
+            ResultSet rs = statement.executeQuery();
+
+            while(rs.next())
+            {
+                if(rs.getInt("total") != item_ids.size())
+                {
+                    return false;
+                }
+            }
+
+            connection.close();
+            return true;
+        }
+        catch (SQLException e)
+        {
             return false;
         }
 
-        return true;
+
     }
+
+    public boolean ifCustomerExists(long contact_id)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) as total from contacts where contact_id = ?;");
+
+            statement.setLong(1, contact_id);
+
+            ResultSet rs = statement.executeQuery();
+
+            while(rs.next())
+            {
+                if(rs.getInt("total") == 0)
+                {
+                    return false;
+                }
+            }
+
+            connection.close();
+            return true;
+        }
+        catch (SQLException e)
+        {
+            return false;
+        }
+    }
+
 
     public Item_json checkAndLoadItem(JSONObject jsonObject)
     {
@@ -81,4 +198,36 @@ public class Filters {
 
         return item_json;
     }
+
+    public boolean checkSubject (String subject)
+    {
+        if(subject.length() > 200)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public boolean checkTermsAndConditions (String termsAndConditions)
+    {
+        if(termsAndConditions.length() > 200)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    public boolean checkCustomerNotes (String customerNotes)
+    {
+        if(customerNotes.length() > 200)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+
+
 }
