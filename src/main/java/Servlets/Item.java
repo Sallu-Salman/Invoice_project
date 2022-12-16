@@ -24,6 +24,12 @@ public class Item extends HttpServlet
 {
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.emptyPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
         Filters filters = new Filters();
@@ -59,19 +65,27 @@ public class Item extends HttpServlet
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         ItemMethods itemMethods = new ItemMethods();
         CommonMethods commonMethods = new CommonMethods();
 
-        long item_id = commonMethods.parseId(request);
+
         String responseJson;
 
-        if (item_id == -1)
+        if (CommonMethods.emptyPath(request.getPathInfo()))
         {
             Item_json[] item_jsons = itemMethods.getItemsDetails();
             responseJson = new Gson().toJson(item_jsons);
         }
         else
         {
+            long item_id = commonMethods.parseId(request);
+
             Item_json item_json = itemMethods.getItemDetails(item_id);
 
             if(item_json.item_name == null)
@@ -90,6 +104,12 @@ public class Item extends HttpServlet
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         ItemMethods itemMethods = new ItemMethods();
         CommonMethods commonMethods = new CommonMethods();
 
@@ -108,6 +128,12 @@ public class Item extends HttpServlet
 
     public void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
 
         ItemMethods itemMethods = new ItemMethods();
         CommonMethods commonMethods = new CommonMethods();

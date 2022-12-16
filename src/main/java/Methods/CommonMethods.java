@@ -43,14 +43,28 @@ public class CommonMethods
         return key;
     }
 
+    public static boolean emptyPath(String path)
+    {
+        return (path == null || path.equals("/"));
+    }
+
+    public static boolean paramPath(String path)
+    {
+        return path.matches("/\\d+/?");
+    }
+
+    public static boolean invoiceFunctionPath(String path)
+    {
+        return path.matches("/\\d+/[a-z]+/?");
+    }
+
+    public static boolean invoiceStatusPath(String path)
+    {
+        return path.matches("/\\d+/status/[a-z]+/?");
+    }
     public long parseId(HttpServletRequest request)
     {
         String pathInfo = request.getPathInfo();
-
-        if(pathInfo == null || pathInfo.equals("/"))
-        {
-            return -1;
-        }
 
         String[] splits = pathInfo.split("/");
         String modelId = splits[1];

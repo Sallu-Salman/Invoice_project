@@ -12,6 +12,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -280,7 +281,7 @@ public class InvoiceMethods
         {
             Statement statement = connection.createStatement();
 
-            ResultSet set = statement.executeQuery("SELECT invoices.invoice_id, invoices.invoice_date , contacts.contact_name, invoices.status , invoices.total_cost FROM invoices INNER JOIN contacts on invoices.customer_id = contacts.contact_id ;");
+            ResultSet set = statement.executeQuery("SELECT invoices.invoice_id, invoices.invoice_date , contacts.contact_name, invoices.status , invoices.total_cost, invoices.payment_made, invoices.written_off_amount FROM invoices INNER JOIN contacts on invoices.customer_id = contacts.contact_id ;");
 
             while (set.next())
             {
@@ -291,6 +292,7 @@ public class InvoiceMethods
                 jsonObject.addProperty("customer_name", set.getString("contact_name"));
                 jsonObject.addProperty("status", set.getString("status"));
                 jsonObject.addProperty("amount", set.getInt("total_cost"));
+                jsonObject.addProperty("balance_due", (set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount")));
 
                 jsonArray.add(jsonObject);
             }
@@ -608,7 +610,7 @@ public class InvoiceMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("SELECT invoices.invoice_id , contacts.contact_name as customer_name, invoices.invoice_date , salespersons.salesperson_name , invoices.subject , invoices.terms_and_conditions , invoices.customer_notes , invoices.sub_total , invoices.tax , invoices.discount , invoices.charges , invoices.total_cost, invoices.status , line_items.line_item_id ,line_items.item_id , line_items.item_name , line_items.item_cost , line_items.item_quantity FROM invoices INNER JOIN contacts ON invoices.customer_id = contacts.contact_id INNER JOIN salespersons ON invoices.salesperson_id = salespersons.salesperson_id INNER JOIN line_items ON invoices.invoice_id = line_items.invoice_id  WHERE invoices.invoice_id = ?;", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement statement = connection.prepareStatement("SELECT invoices.invoice_id , contacts.contact_name as customer_name, invoices.invoice_date , salespersons.salesperson_name , invoices.subject , invoices.terms_and_conditions , invoices.customer_notes , invoices.sub_total , invoices.tax , invoices.discount , invoices.charges , invoices.total_cost, invoices.payment_made, invoices.written_off_amount, invoices.status , line_items.line_item_id ,line_items.item_id , line_items.item_name , line_items.item_cost , line_items.item_quantity FROM invoices INNER JOIN contacts ON invoices.customer_id = contacts.contact_id INNER JOIN salespersons ON invoices.salesperson_id = salespersons.salesperson_id INNER JOIN line_items ON invoices.invoice_id = line_items.invoice_id  WHERE invoices.invoice_id = ?;", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 
             statement.setLong(1, invoice_id);
 
@@ -667,6 +669,17 @@ public class InvoiceMethods
 
             responseJson.addProperty("total_cost", rs.getInt("total_cost"));
 
+            if(rs.getInt("payment_made") != 0)
+            {
+                responseJson.addProperty("payment_made", rs.getInt("payment_made"));
+            }
+            if(rs.getInt("written_off_amount") != 0)
+            {
+                responseJson.addProperty("written_off_amount" , rs.getInt("written_off_amount"));
+            }
+
+            responseJson.addProperty("balance_due", (rs.getInt("total_cost") -  rs.getInt("payment_made") - rs.getInt("written_off_amount")));
+
             if(rs.getString("customer_notes") != null)
             {
                 responseJson.addProperty("customer_notes", rs.getString("customer_notes"));
@@ -675,8 +688,6 @@ public class InvoiceMethods
             {
                 responseJson.addProperty("terms_and_conditions", rs.getString("terms_and_conditions"));
             }
-
-
 
             connection.close();
 
@@ -687,5 +698,60 @@ public class InvoiceMethods
             return null;
         }
     }
+
+    public static void invoiceFunctionRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        String pathInfo = request.getPathInfo();
+
+        String[] splits = pathInfo.split("/");
+        String function = splits[2];
+
+        if(function.equals("email"))
+        {
+            response.getWriter().println("emailing...");
+        }
+        else if(function.equals("writeoff"))
+        {
+            response.getWriter().println("writeOff...");
+        }
+        else if(function.equals("cancelwriteoff"))
+        {
+            response.getWriter().println("cancelWriteOff...");
+        }
+        else if(function.equals("recordpayment"))
+        {
+            response.getWriter().println("recordingPayment...");
+        }
+        else
+        {
+            response.getWriter().println("Invalid URL passed");
+        }
+    }
+
+    public static void invoiceStatusRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        String pathInfo = request.getPathInfo();
+
+        String[] splits = pathInfo.split("/");
+        String status = splits[3];
+
+        if(status.equals("sent"))
+        {
+            response.getWriter().println("sending");
+        }
+        else if(status.equals("draft"))
+        {
+            response.getWriter().println("drafting");
+        }
+        else if(status.equals("void"))
+        {
+            response.getWriter().println("voiding");
+        }
+        else
+        {
+            response.getWriter().println("Invalid URL passed");
+        }
+    }
+
 
 }

@@ -23,6 +23,25 @@ public class Invoice extends HttpServlet
 {
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(CommonMethods.invoiceFunctionPath(request.getPathInfo()))
+        {
+            //redirect to invoiceFunction
+            InvoiceMethods.invoiceFunctionRedirect(request, response);
+            return;
+        }
+
+        if(CommonMethods.invoiceStatusPath(request.getPathInfo()))
+        {
+            //redirect to status
+            InvoiceMethods.invoiceStatusRedirect(request, response);
+            return;
+        }
+
+        if(!CommonMethods.emptyPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
@@ -65,18 +84,25 @@ public class Invoice extends HttpServlet
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         CommonMethods commonMethods = new CommonMethods();
 
-        long invoice_id = commonMethods.parseId(request);
         String responseJson;
 
-        if (invoice_id == -1)
+        if (CommonMethods.emptyPath(request.getPathInfo()))
         {
             responseJson = invoiceMethods.getInvoicesDetails();
         }
         else
         {
+            long invoice_id = commonMethods.parseId(request);
+
             responseJson = invoiceMethods.getInvoiceDetails(invoice_id);
 
             if(responseJson == null)
@@ -94,6 +120,11 @@ public class Invoice extends HttpServlet
 
     public void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         CommonMethods commonMethods = new CommonMethods();
 
@@ -107,7 +138,7 @@ public class Invoice extends HttpServlet
 
         inputJson.put("invoice_id", commonMethods.parseId(request));
 
-        if(inputJson.getLong("invoice_id") == -1 || invoiceMethods.updateInvoice(inputJson) == 0)
+        if( invoiceMethods.updateInvoice(inputJson) == 0)
         {
             response.getWriter().println("Something went wrong !\nInvoice was not updated");
         }
@@ -120,6 +151,12 @@ public class Invoice extends HttpServlet
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         CommonMethods commonMethods = new CommonMethods();
 

@@ -27,6 +27,12 @@ public class Contact extends HttpServlet {
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.emptyPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
         Filters filters = new Filters();
@@ -62,19 +68,25 @@ public class Contact extends HttpServlet {
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         ContactMethods contactMethods = new ContactMethods();
         CommonMethods commonMethods = new CommonMethods();
 
-        long contact_id = commonMethods.parseId(request);
         String responseJson;
 
-        if (contact_id == -1)
+        if (CommonMethods.emptyPath(request.getPathInfo()))
         {
             Contact_json[] contact_jsons = contactMethods.getContactsDetails();
             responseJson = new Gson().toJson(contact_jsons);
         }
         else
         {
+            long contact_id = commonMethods.parseId(request);
             Contact_json contact_json = contactMethods.getContactDetails(contact_id);
 
             if(contact_json.contact_name == null)
@@ -94,6 +106,12 @@ public class Contact extends HttpServlet {
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         ContactMethods contactMethods = new ContactMethods();
         CommonMethods commonMethods = new CommonMethods();
 
@@ -112,6 +130,12 @@ public class Contact extends HttpServlet {
 
     public void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
+        if(!CommonMethods.paramPath(request.getPathInfo()))
+        {
+            response.getWriter().println("Invalid URL passed");
+            return;
+        }
+
         ContactMethods contactMethods = new ContactMethods();
         CommonMethods commonMethods = new CommonMethods();
 
