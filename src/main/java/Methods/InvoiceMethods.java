@@ -1019,26 +1019,33 @@ public class InvoiceMethods
         }
 
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT status, payment_made from invoices where invoice_id  = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT status, payment_made, written_off_amount from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
             int payment_made = 0;
+            String newStatus = "SENT";
 
             while (set.next()) {
 
-                if(!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")))
+                payment_made = set.getInt("payment_made");
+
+                if(!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || payment_made == 0)
                 {
                     response.getWriter().println("No payments available");
+                    return;
                 }
 
-                payment_made = set.getInt("payment_made");
+                if(set.getInt("written_off_amount") != 0)
+                {
+                    newStatus = "PARTIALLY PAID";
+                }
             }
 
             //Update Invoice balance_due and status
 
             statement = connection.prepareStatement("UPDATE invoices SET status = ?, payment_made = 0 where invoice_id = ? ;");
-            statement.setString(1, "SENT" );
+            statement.setString(1, newStatus );
             statement.setLong(2, invoice_id);
             statement.executeUpdate();
 
@@ -1059,6 +1066,130 @@ public class InvoiceMethods
         {
             response.getWriter().println("Something went wrong. Cannot delete Invoice payment");
         }
+    }
+
+    public static void cancelInvoiceWriteOff(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if (!filters.ifInvoiceExists(invoice_id)) {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, payment_made, written_off_amount from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            int written_off_amount = 0;
+            String newStatus = "SENT";
+
+            while (set.next()) {
+
+                written_off_amount = set.getInt("written_off_amount");
+
+                if (!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || written_off_amount == 0) {
+                    response.getWriter().println("No write offs available");
+                    return;
+                }
+
+                if (set.getInt("payment_made") != 0) {
+                    newStatus = "PARTIALLY PAID";
+                }
+            }
+
+            //Update Invoice balance_due and status
+
+            statement = connection.prepareStatement("UPDATE invoices SET status = ?, written_off_amount = 0 where invoice_id = ? ;");
+            statement.setString(1, newStatus );
+            statement.setLong(2, invoice_id);
+            statement.executeUpdate();
+
+            //Update chart of accounts
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, written_off_amount);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Bad debt';");
+            statement.setInt(1, written_off_amount);
+            statement.executeUpdate();
+
+            response.getWriter().println("The write off done for this Invoice has been cancelled");
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Cannot cancel write off");
+        }
+
+    }
+
+
+    public static void writeOffInvoice(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if (!filters.ifInvoiceExists(invoice_id)) {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost, payment_made, written_off_amount from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            int balance_due = 0;
+
+            while (set.next()) {
+                if (set.getString("status").equals("VOID")) {
+                    response.getWriter().println("This feature cannot be used for a void invoice");
+                    return;
+                }
+                if (set.getString("status").equals("DRAFT")) {
+                    response.getWriter().println("This feature cannot be used for a draft invoice");
+                    return;
+                }
+
+                balance_due = set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount");
+            }
+
+            //Update Invoice status and balance_due
+
+            statement = connection.prepareStatement("UPDATE invoices SET status = ?, written_off_amount = written_off_amount + ? where invoice_id = ? ;");
+            statement.setString(1, "PAID" );
+            statement.setInt(2, balance_due);
+            statement.setLong(3, invoice_id);
+            statement.executeUpdate();
+
+            //Update chart of accounts
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, balance_due);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Bad debt';");
+            statement.setInt(1, balance_due);
+            statement.executeUpdate();
+
+            response.getWriter().println("Invoice has been written off successfully");
+
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Cannot write off Invoice");
+        }
+
+
     }
 
     public static void recordInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
@@ -1202,11 +1333,11 @@ public class InvoiceMethods
         }
         else if(function.equals("writeoff"))
         {
-            response.getWriter().println("writeOff...");
+            InvoiceMethods.writeOffInvoice(request, response);
         }
         else if(function.equals("cancelwriteoff"))
         {
-            response.getWriter().println("cancelWriteOff...");
+            InvoiceMethods.cancelInvoiceWriteOff(request, response);
         }
         else if(function.equals("recordpayment"))
         {
