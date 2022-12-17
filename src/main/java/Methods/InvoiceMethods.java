@@ -699,6 +699,51 @@ public class InvoiceMethods
         }
     }
 
+    public static void markAsDraft(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if(!filters.ifInvoiceExists(invoice_id))
+        {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            while (set.next()) {
+
+                if (set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID") || set.getString("status").equals("SENT")) {
+                    response.getWriter().println("Open invoices cannot be changed to Draft");
+                    return;
+                }
+                if (set.getString("status").equals("DRAFT")) {
+                    response.getWriter().println("Invoice already in Draft state");
+                    return;
+                }
+                if (set.getString("status").equals("VOID")) {
+                    statement = connection.prepareStatement("UPDATE invoices SET status = 'DRAFT' where invoice_id = ? ;");
+                    statement.setLong(1, invoice_id);
+                    statement.executeUpdate();
+
+                    response.getWriter().println("Invoice marked as Draft");
+                    return;
+                }
+
+            }
+        }
+        catch(SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Cannot mark invoice as Draft");
+        }
+    }
     public static void markAsVoid(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
         CommonMethods commonMethods = new CommonMethods();
@@ -1002,7 +1047,7 @@ public class InvoiceMethods
         }
         else if(status.equals("draft"))
         {
-            response.getWriter().println("drafting");
+            InvoiceMethods.markAsDraft(request, response);
         }
         else if(status.equals("void"))
         {

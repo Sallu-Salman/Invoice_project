@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="df284067-410b-4fde-8fb9-dceec6f5b0b6" name="Changes" comment="CRUD for Items">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Methods/InvoiceMethods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/InvoiceMethods.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
