@@ -1005,6 +1005,190 @@ public class InvoiceMethods
 
     }
 
+    public static void deleteInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if (!filters.ifInvoiceExists(invoice_id)) {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, payment_made from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            int payment_made = 0;
+
+            while (set.next()) {
+
+                if(!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")))
+                {
+                    response.getWriter().println("No payments available");
+                }
+
+                payment_made = set.getInt("payment_made");
+            }
+
+            //Update Invoice balance_due and status
+
+            statement = connection.prepareStatement("UPDATE invoices SET status = ?, payment_made = 0 where invoice_id = ? ;");
+            statement.setString(1, "SENT" );
+            statement.setLong(2, invoice_id);
+            statement.executeUpdate();
+
+            //Update chart of accounts
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, payment_made);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Petty cash';");
+            statement.setInt(1, payment_made);
+            statement.executeUpdate();
+
+            response.getWriter().println("Invoice payment deleted successfully");
+
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Cannot delete Invoice payment");
+        }
+    }
+
+    public static void recordInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if (!filters.ifInvoiceExists(invoice_id)) {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        JSONObject bodyJson = commonMethods.getBodyJson(request);
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost, payment_made, written_off_amount from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            int balance_due = 0;
+
+            while (set.next())
+            {
+                if (set.getString("status").equals("VOID")) {
+                    response.getWriter().println("Invoice in Void status. Cannot record payment");
+                    return;
+                }
+                if (set.getString("status").equals("DRAFT")) {
+                    response.getWriter().println("Invoice in Draft status. Cannot record payment");
+                    return;
+                }
+
+                balance_due = set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount");
+            }
+
+            if(bodyJson.getInt("amount_received") <= 0)
+            {
+                response.getWriter().println("Incorrect value entered as amount");
+            }
+            else if(balance_due == 0 || bodyJson.getInt("amount_received") > balance_due)
+            {
+                response.getWriter().println("Excess amount entered");
+            }
+
+            else
+            {
+                String newStatus;
+
+                if(bodyJson.getInt("amount_received") == balance_due)
+                {
+                    newStatus = "PAID";
+                }
+                else
+                {
+                    newStatus = "PARTIALLY PAID";
+                }
+
+                //Update Invoice status and balance_due
+
+                statement = connection.prepareStatement("UPDATE invoices SET status = ?, payment_made = payment_made + ? where invoice_id = ? ;");
+                statement.setString(1, newStatus );
+                statement.setInt(2, bodyJson.getInt("amount_received"));
+                statement.setLong(3, invoice_id);
+                statement.executeUpdate();
+
+                //Update chart of accounts
+
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Accounts Receivable';");
+                statement.setInt(1, bodyJson.getInt("amount_received"));
+                statement.executeUpdate();
+
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Petty cash';");
+                statement.setInt(1, bodyJson.getInt("amount_received"));
+                statement.executeUpdate();
+
+                response.getWriter().println("Payment recorded successfully");
+            }
+
+
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Could not record payment");
+        }
+
+    }
+
+    public static void emailInvoice(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if (!filters.ifInvoiceExists(invoice_id)) {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                if(set.getString("status").equals("VOID"))
+                {
+                    response.getWriter().println("Invoice in Void status. Cannot be sent");
+                    return;
+                }
+                if (set.getString("status").equals("DRAFT"))
+                {
+                    InvoiceMethods.markAsSent(request, response);
+                }
+            }
+
+            // Email the invoice
+
+        } catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Invoice cannot be sent");
+        }
+
+    }
+
     public static void invoiceFunctionRedirect(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
         String pathInfo = request.getPathInfo();
@@ -1014,7 +1198,7 @@ public class InvoiceMethods
 
         if(function.equals("email"))
         {
-            response.getWriter().println("emailing...");
+            InvoiceMethods.emailInvoice(request, response);
         }
         else if(function.equals("writeoff"))
         {
@@ -1026,7 +1210,11 @@ public class InvoiceMethods
         }
         else if(function.equals("recordpayment"))
         {
-            response.getWriter().println("recordingPayment...");
+            InvoiceMethods.recordInvoicePayment(request, response);
+        }
+        else if(function.equals("deletepayment"))
+        {
+            InvoiceMethods.deleteInvoicePayment(request, response);
         }
         else
         {
