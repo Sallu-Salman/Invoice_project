@@ -127,6 +127,7 @@ public class Invoice extends HttpServlet
         }
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         CommonMethods commonMethods = new CommonMethods();
+        Filters filters = new Filters();
 
         JSONObject inputJson = invoiceMethods.readBodyJson(request);
 
@@ -138,13 +139,33 @@ public class Invoice extends HttpServlet
 
         inputJson.put("invoice_id", commonMethods.parseId(request));
 
-        if( invoiceMethods.updateInvoice(inputJson) == 0)
+        if(!filters.ifInvoiceExists(inputJson.getLong("invoice_id")))
         {
-            response.getWriter().println("Something went wrong !\nInvoice was not updated");
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        String invoice_status = InvoiceMethods.getInvoiceStatus(inputJson.getLong("invoice_id"));
+
+        if(invoice_status.equals("PAID") || invoice_status.equals("PARTIALLY PAID"))
+        {
+            response.getWriter().println("Payment already initiated. Cannot edit invoice now");
+        }
+        else if(invoice_status.equals("VOID"))
+        {
+            response.getWriter().println("Invoice at Void status cannot be editted");
+        }
+        else if(invoice_status.equals("SENT") && (invoiceMethods.updateInvoice(inputJson, "SENT") != 0))
+        {
+            response.getWriter().println("Invoice updates successfully");
+        }
+        else if( invoiceMethods.updateInvoice(inputJson, "DRAFT") != 0)
+        {
+            response.getWriter().println("Invoice updated successfully");
         }
         else
         {
-            response.getWriter().println("Invoice updated successfully");
+            response.getWriter().println("Something went wrong !\nInvoice was not updated");
         }
 
     }
@@ -159,16 +180,34 @@ public class Invoice extends HttpServlet
 
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         CommonMethods commonMethods = new CommonMethods();
+        Filters filters = new Filters();
 
         long invoice_id = commonMethods.parseId(request);
 
-        if(invoiceMethods.deleteInvoice(invoice_id) == 0)
+        if(!filters.ifInvoiceExists(invoice_id))
         {
-            response.getWriter().println("Something went wrong !\nInvoice was not deleted");
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        String invoice_status = InvoiceMethods.getInvoiceStatus(invoice_id);
+
+        if(invoice_status.equals("PAID") || invoice_status.equals("PARTIALLY PAID"))
+        {
+            response.getWriter().println("Invoice contains payments");
+        }
+        else if(invoice_status.equals("SENT") && InvoiceMethods.deleteSentInvoice(invoice_id) != 0)
+        {
+            response.getWriter().println("Invoice deleted successfully");
+        }
+
+        else if(invoiceMethods.deleteInvoice(invoice_id) != 0)
+        {
+            response.getWriter().println("Invoice deleted successfully !");
         }
         else
         {
-            response.getWriter().println("Invoice deleted successfully !");
+            response.getWriter().println("Something went wrong !\nInvoice was not deleted");
         }
     }
 }

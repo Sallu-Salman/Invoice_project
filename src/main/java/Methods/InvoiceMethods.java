@@ -6,6 +6,7 @@ import Templates.Item_json;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.mysql.cj.jdbc.ConnectionImpl;
 import org.apache.commons.validator.GenericValidator;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -40,7 +41,7 @@ public class InvoiceMethods
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
 
-        StringBuilder query = new StringBuilder("SELECT item_id, item_name, item_cost FROM items WHERE item_id IN ( ");
+        StringBuilder query = new StringBuilder("SELECT item_id, item_name, item_cost, stock_rate FROM items WHERE item_id IN ( ");
         boolean key = true;
         ResultSet set;
 
@@ -86,6 +87,8 @@ public class InvoiceMethods
                     {
                         line_items[index].item_cost = set.getInt("item_cost");
                     }
+
+                    line_items[index].stock_rate = set.getInt("stock_rate");
                 }
 
                 itemIdIndexMapper.remove(set.getLong("item_id"));
@@ -166,7 +169,7 @@ public class InvoiceMethods
         CommonMethods commonMethods = new CommonMethods();
         Connection connection =  commonMethods.createConnection();
 
-        StringBuilder query = new StringBuilder("INSERT INTO line_items (invoice_id, item_id, item_name, item_cost, item_quantity) VALUES ");
+        StringBuilder query = new StringBuilder("INSERT INTO line_items (invoice_id, item_id, item_name, item_cost, item_quantity, stock_rate) VALUES ");
         boolean key = true;
 
         for(Item_json lineItem : lineItems)
@@ -187,6 +190,8 @@ public class InvoiceMethods
                 values.append(lineItem.item_cost);
                 values.append(" , ");
                 values.append(lineItem.item_quantity);
+                values.append(" , ");
+                values.append(lineItem.stock_rate);
                 values.append(" ) ");
 
                 query.append(values);
@@ -335,7 +340,37 @@ public class InvoiceMethods
 
     }
 
-    public int updateLineItems(JSONArray newLineItems, long invoice_id)
+    public static void updateSentInvoiceItems(HashMap<Long,Integer> item_id_hash)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try
+        {
+
+            StringBuilder itemQuery = new StringBuilder("UPDATE items SET item_quantity = CASE item_id ");
+            StringBuilder reducedItemIds = new StringBuilder();
+            boolean reducedIdKey = true;
+
+            for(long item_id : item_id_hash.keySet())
+            {
+                itemQuery.append(" WHEN " + item_id + " THEN item_quantity + " + item_id_hash.get(item_id));
+                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+                reducedItemIds.append(item_id);
+            }
+
+            itemQuery.append(" ELSE item_quantity END WHERE item_id IN ( " + reducedItemIds+" );");
+
+            PreparedStatement statement = connection.prepareStatement(itemQuery.toString());
+            statement.executeUpdate();
+        }
+        catch (SQLException e)
+        {
+
+        }
+    }
+
+    public int updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
     {
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
@@ -343,6 +378,7 @@ public class InvoiceMethods
         Filters filters = new Filters();
         Gson gson = new Gson();
         int sub_total = 0;
+        int change_in_inventory_asset = 0;
 
         if(!filters.ifItemsExists(newLineItems))
         {
@@ -351,12 +387,14 @@ public class InvoiceMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("SELECT line_item_id, item_cost, item_quantity FROM line_items WHERE invoice_id = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT line_item_id, item_id, item_cost, item_quantity, stock_rate FROM line_items WHERE invoice_id = ?;");
             statement.setLong(1, invoice_id);
             ResultSet rs = statement.executeQuery();
 
             HashMap<Long, JSONObject> existingLineItems = new HashMap<Long, JSONObject>();
+            HashMap<Long, Integer> updateItemHash = new HashMap<Long, Integer>();
             List<Item_json> addLineItemList = new ArrayList<Item_json>();
+
 
 
             while(rs.next())
@@ -364,6 +402,8 @@ public class InvoiceMethods
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("item_cost", rs.getInt("item_cost"));
                 jsonObject.put("item_quantity", rs.getInt("item_quantity"));
+                jsonObject.put("stock_rate", rs.getInt("stock_rate"));
+                jsonObject.put("item_id", rs.getLong("item_id"));
 
                 sub_total += (rs.getInt("item_cost") * rs.getInt("item_quantity"));
 
@@ -397,6 +437,26 @@ public class InvoiceMethods
                         {
                             commonMethods.conjunction(key, updateLineItemQuery);
                             updateLineItemQuery.append("item_quantity = "+jsonObject.getInt("item_quantity"));
+
+                            if(invoice_status.equals("SENT"))
+                            {
+                                int item_quantity =(jsonObject.getInt("item_quantity") - existingObject.getInt("item_quantity"));
+
+                                change_in_inventory_asset += (item_quantity * existingObject.getInt("stock_rate"));
+
+                                item_quantity *= -1;
+
+                                if(updateItemHash.containsKey(existingObject.getLong("item_id")))
+                                {
+                                    item_quantity += updateItemHash.get(existingObject.getLong("item_id"));
+                                    updateItemHash.remove(existingObject.getLong("item_id"));
+                                }
+
+                                updateItemHash.put(existingObject.getLong("item_id"), item_quantity);
+
+
+                            }
+
                         }
 
                         updateLineItemQuery.append(" WHERE line_item_id ="+jsonObject.getLong("line_item_id"));
@@ -417,6 +477,7 @@ public class InvoiceMethods
             {
                 StringBuilder deleteLineItems = new StringBuilder("DELETE FROM line_items WHERE line_item_id IN ( ");
                 boolean key = true;
+                HashMap<Long, Integer> itemToBeReverted = new HashMap<Long, Integer>();
 
                 for(long removedLineItemId : existingLineItems.keySet())
                 {
@@ -427,12 +488,28 @@ public class InvoiceMethods
 
                     sub_total -= (existingObject.getInt("item_cost") * existingObject.getInt("item_quantity"));
 
+                    if(invoice_status.equals("SENT"))
+                    {
+                        int item_quantity = existingObject.getInt("item_quantity");
+
+                        change_in_inventory_asset -= (item_quantity * existingObject.getInt("stock_rate"));
+
+                        if(updateItemHash.containsKey(existingObject.getLong("item_id")))
+                        {
+                            item_quantity += updateItemHash.get(existingObject.getLong("item_id"));
+                            updateItemHash.remove(existingObject.getLong("item_id"));
+                        }
+
+                        updateItemHash.put(existingObject.getLong("item_id"), item_quantity);
+                    }
+
                 }
 
                 deleteLineItems.append(");");
 
                 statement = connection.prepareStatement(deleteLineItems.toString());
                 statement.executeUpdate();
+
             }
 
             if(addLineItemList.size() > 0)
@@ -441,6 +518,42 @@ public class InvoiceMethods
                 invoiceMethods.storeLineItems(insertingLineItems, invoice_id);
                 sub_total += invoiceMethods.findSubTotal(insertingLineItems);
 
+                if(invoice_status.equals("SENT"))
+                {
+                    //Reduce the item quantity in items table
+
+                    HashMap<Long, Integer> itemToBeAdded = new HashMap<Long, Integer>();
+
+                    for(Item_json item_json : insertingLineItems)
+                    {
+                        change_in_inventory_asset += (item_json.item_quantity * item_json.stock_rate);
+
+                        if(updateItemHash.containsKey(item_json.item_id))
+                        {
+                            item_json.item_quantity += updateItemHash.get(item_json.item_id);
+                            updateItemHash.remove(item_json.item_id);
+                        }
+
+                        updateItemHash.put(item_json.item_id, (item_json.item_quantity )*(-1));
+                    }
+
+                }
+
+            }
+
+            if(updateItemHash.size() > 0)
+            {
+                InvoiceMethods.updateSentInvoiceItems(updateItemHash);
+            }
+            if(change_in_inventory_asset != 0)
+            {
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Inventory asset';");
+                statement.setInt(1, change_in_inventory_asset);
+                statement.executeUpdate();
+
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Cost of Goods Sold';");
+                statement.setInt(1, change_in_inventory_asset);
+                statement.executeUpdate();
             }
 
             connection.close();
@@ -462,7 +575,7 @@ public class InvoiceMethods
         return sub_total;
     }
 
-    public int updateInvoice(JSONObject inputJson)
+    public int updateInvoice(JSONObject inputJson, String invoice_status)
     {
         CommonMethods commonMethods = new CommonMethods();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
@@ -470,6 +583,7 @@ public class InvoiceMethods
         Filters filters = new Filters();
 
         boolean isTotalChanged = false;
+        int old_total_cost = 0;
 
         try
         {
@@ -534,7 +648,7 @@ public class InvoiceMethods
             }
             if(inputJson.has("line_items"))
             {
-                int newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"));
+                int newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
 
                 if(newSubTotal == 0)
                 {
@@ -571,6 +685,19 @@ public class InvoiceMethods
             {
                 key = commonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("total_cost = sub_total + tax - discount + charges ");
+
+                if(invoice_status.equals("SENT"))
+                {
+                    PreparedStatement statement = connection.prepareStatement("SELECT total_cost FROM invoices WHERE invoice_id = ?;");
+                    statement.setLong(1, inputJson.getLong("invoice_id"));
+
+                    ResultSet set = statement.executeQuery();
+
+                    while(set.next())
+                    {
+                        old_total_cost = set.getInt("total_cost");
+                    }
+                }
             }
 
             invoiceUpdateQuery.append(" WHERE invoice_id = " + inputJson.getLong("invoice_id") + ";");
@@ -582,6 +709,19 @@ public class InvoiceMethods
 
             PreparedStatement statement = connection.prepareStatement(invoiceUpdateQuery.toString());
             int affected_rows = statement.executeUpdate();
+
+            if(invoice_status.equals("SENT"))
+            {
+                statement = connection.prepareStatement("SELECT total_cost FROM invoices WHERE invoice_id = ?;");
+                statement.setLong(1, inputJson.getLong("invoice_id"));
+
+                ResultSet set = statement.executeQuery();
+
+                while(set.next())
+                {
+                    InvoiceMethods.updateSalesAccount(old_total_cost, set.getInt("total_cost"));
+                }
+            }
 
             connection.close();
 
@@ -598,15 +738,38 @@ public class InvoiceMethods
 
     }
 
+    public static void updateSalesAccount(int old_total, int new_total)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection =  commonMethods.createConnection();
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? + ? WHERE account_name = 'Sales';");
+            statement.setInt(1, old_total);
+            statement.setInt(2, new_total);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? + ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, old_total);
+            statement.setInt(2, new_total);
+            statement.executeUpdate();
+        }
+        catch (SQLException e)
+        {
+
+        }
+    }
+
     public String getInvoiceDetails(long invoice_id)
     {
         CommonMethods commonMethods = new CommonMethods();
 
         Connection connection =  commonMethods.createConnection();
-        int totalLineItems = 0;
 
         JsonObject responseJson = new JsonObject();
         JsonArray jsonArray = new JsonArray();
+
 
         try
         {
@@ -744,56 +907,49 @@ public class InvoiceMethods
             response.getWriter().println("Something went wrong. Cannot mark invoice as Draft");
         }
     }
-    public static void markAsVoid(HttpServletRequest request, HttpServletResponse response) throws IOException
+
+    public static int deleteSentInvoice(long invoice_id) throws IOException
     {
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
+        InvoiceMethods invoiceMethods = new InvoiceMethods();
 
-        long invoice_id = commonMethods.parseId(request);
-
-        if(!filters.ifInvoiceExists(invoice_id))
-        {
-            response.getWriter().println("Invoice does not exists");
-            return;
-        }
+        int sales = 0;
 
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT total_cost from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
-            int sales = 0;
-            int cost_of_goods_sold = 0;
 
-            while (set.next()) {
-
-                if(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID"))
-                {
-                    response.getWriter().println("You cannot mark a paid invoice as Void");
-                    return;
-                }
-                if(set.getString("status").equals("VOID"))
-                {
-                    response.getWriter().println("Invoice already in Void state");
-                    return;
-                }
-                if(set.getString("status").equals("DRAFT"))
-                {
-                    statement = connection.prepareStatement("UPDATE invoices SET status = 'VOID' where invoice_id = ? ;");
-                    statement.setLong(1, invoice_id);
-                    statement.executeUpdate();
-
-                    response.getWriter().println("Invoice marked as Void");
-                    return;
-                }
-
+            while (set.next())
+            {
                 sales = set.getInt("total_cost");
             }
 
-            //Getting quantity and stock rate of each line item
-            statement = connection.prepareStatement("SELECT item_id, item_quantity, stock_rate FROM line_items where invoice_id = ?;");
+            InvoiceMethods.revertItemsSent(invoice_id, sales);
+
+            return invoiceMethods.deleteInvoice(invoice_id);
+
+
+        }
+        catch (SQLException e)
+        {
+            return 0;
+        }
+
+    }
+
+    public static void revertItemsSent(long invoice_id, int sales) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        int cost_of_goods_sold = 0;
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT item_id, item_quantity, stock_rate FROM line_items where invoice_id = ?;");
             statement.setLong(1, invoice_id);
-            set = statement.executeQuery();
+            ResultSet set = statement.executeQuery();
 
             HashMap<Long, Integer> itemQuantityInInvoice = new HashMap<Long, Integer>();
             HashMap<Long, Integer> itemIdStockRate = new HashMap<Long, Integer>();
@@ -854,7 +1010,61 @@ public class InvoiceMethods
             statement.setInt(1, sales);
             statement.executeUpdate();
 
-            //Update invoice status as 'Sent'
+        }
+        catch (SQLException e)
+        {
+
+        }
+    }
+    public static void markAsVoid(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if(!filters.ifInvoiceExists(invoice_id))
+        {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+            int sales = 0;
+            int cost_of_goods_sold = 0;
+
+            while (set.next()) {
+
+                if(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID"))
+                {
+                    response.getWriter().println("You cannot mark a paid invoice as Void");
+                    return;
+                }
+                if(set.getString("status").equals("VOID"))
+                {
+                    response.getWriter().println("Invoice already in Void state");
+                    return;
+                }
+                if(set.getString("status").equals("DRAFT"))
+                {
+                    statement = connection.prepareStatement("UPDATE invoices SET status = 'VOID' where invoice_id = ? ;");
+                    statement.setLong(1, invoice_id);
+                    statement.executeUpdate();
+
+                    response.getWriter().println("Invoice marked as Void");
+                    return;
+                }
+
+                sales = set.getInt("total_cost");
+            }
+
+            InvoiceMethods.revertItemsSent(invoice_id, sales);
+
+            //Update invoice status as 'Void'
 
             statement = connection.prepareStatement("UPDATE invoices SET status = 'VOID' where invoice_id = ? ;");
             statement.setLong(1, invoice_id);
@@ -1163,6 +1373,12 @@ public class InvoiceMethods
                 balance_due = set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount");
             }
 
+            if(balance_due == 0)
+            {
+                response.getWriter().println("This invoice cannot be written off");
+                return;
+            }
+
             //Update Invoice status and balance_due
 
             statement = connection.prepareStatement("UPDATE invoices SET status = ?, written_off_amount = written_off_amount + ? where invoice_id = ? ;");
@@ -1190,6 +1406,29 @@ public class InvoiceMethods
         }
 
 
+    }
+
+    public static String getInvoiceStatus(long invoice_id)
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                return set.getString("status");
+            }
+        }
+        catch (SQLException e)
+        {
+            return null;
+        }
+
+        return null;
     }
 
     public static void recordInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
@@ -1310,6 +1549,7 @@ public class InvoiceMethods
                     InvoiceMethods.markAsSent(request, response);
                 }
             }
+
 
             // Email the invoice
 

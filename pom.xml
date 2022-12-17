@@ -47,6 +47,12 @@
       <version>1.6</version>
     </dependency>
 
+    <dependency>
+      <groupId>com.courier</groupId>
+      <artifactId>courier-java</artifactId>
+      <version>1.6.0</version>
+    </dependency>
+
   </dependencies>
   <build>
     <finalName>Invoice</finalName>
