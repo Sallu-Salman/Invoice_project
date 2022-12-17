@@ -699,6 +699,132 @@ public class InvoiceMethods
         }
     }
 
+    public static void markAsVoid(HttpServletRequest request, HttpServletResponse response) throws IOException
+    {
+        CommonMethods commonMethods = new CommonMethods();
+        Connection connection = commonMethods.createConnection();
+        Filters filters = new Filters();
+
+        long invoice_id = commonMethods.parseId(request);
+
+        if(!filters.ifInvoiceExists(invoice_id))
+        {
+            response.getWriter().println("Invoice does not exists");
+            return;
+        }
+
+        try {
+            PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
+            statement.setLong(1, invoice_id);
+            ResultSet set = statement.executeQuery();
+            int sales = 0;
+            int cost_of_goods_sold = 0;
+
+            while (set.next()) {
+
+                if(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID"))
+                {
+                    response.getWriter().println("You cannot mark a paid invoice as Void");
+                    return;
+                }
+                if(set.getString("status").equals("VOID"))
+                {
+                    response.getWriter().println("Invoice already in Void state");
+                    return;
+                }
+                if(set.getString("status").equals("DRAFT"))
+                {
+                    statement = connection.prepareStatement("UPDATE invoices SET status = 'VOID' where invoice_id = ? ;");
+                    statement.setLong(1, invoice_id);
+                    statement.executeUpdate();
+
+                    response.getWriter().println("Invoice marked as Void");
+                    return;
+                }
+
+                sales = set.getInt("total_cost");
+            }
+
+            //Getting quantity and stock rate of each line item
+            statement = connection.prepareStatement("SELECT item_id, item_quantity, stock_rate FROM line_items where invoice_id = ?;");
+            statement.setLong(1, invoice_id);
+            set = statement.executeQuery();
+
+            HashMap<Long, Integer> itemQuantityInInvoice = new HashMap<Long, Integer>();
+            HashMap<Long, Integer> itemIdStockRate = new HashMap<Long, Integer>();
+
+            while (set.next())
+            {
+                int quantity = set.getInt("item_quantity");
+
+                if(itemQuantityInInvoice.containsKey(set.getLong("item_id")))
+                {
+                    quantity += itemQuantityInInvoice.get("item_id");
+                    itemQuantityInInvoice.remove(set.getLong("item_id"));
+                }
+
+                itemQuantityInInvoice.put(set.getLong("item_id"), quantity);
+                itemIdStockRate.put(set.getLong("item_id"), set.getInt("stock_rate"));
+            }
+
+            //Increase the item quantity in items table
+
+            StringBuilder itemQuery = new StringBuilder("UPDATE items SET item_quantity = CASE item_id ");
+            StringBuilder reducedItemIds = new StringBuilder();
+            boolean reducedIdKey = true;
+
+            for(long item_id : itemQuantityInInvoice.keySet())
+            {
+                itemQuery.append(" WHEN " + item_id + " THEN item_quantity + " + itemQuantityInInvoice.get(item_id));
+                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+
+                reducedItemIds.append(item_id);
+            }
+
+            itemQuery.append(" ELSE item_quantity END WHERE item_id IN ( " + reducedItemIds+" );");
+
+            statement = connection.prepareStatement(itemQuery.toString());
+            statement.executeUpdate();
+
+            //Update chart of accounts
+
+            for(long item_id : itemIdStockRate.keySet())
+            {
+                cost_of_goods_sold += (itemIdStockRate.get(item_id)*itemQuantityInInvoice.get(item_id));
+            }
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Inventory asset';");
+            statement.setInt(1, cost_of_goods_sold);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Cost of Goods Sold';");
+            statement.setInt(1, cost_of_goods_sold);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Sales';");
+            statement.setInt(1, sales);
+            statement.executeUpdate();
+
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Accounts Receivable';");
+            statement.setInt(1, sales);
+            statement.executeUpdate();
+
+            //Update invoice status as 'Sent'
+
+            statement = connection.prepareStatement("UPDATE invoices SET status = 'VOID' where invoice_id = ? ;");
+            statement.setLong(1, invoice_id);
+            statement.executeUpdate();
+
+            response.getWriter().println("Invoice marked as 'VOID'");
+
+
+        }
+        catch (SQLException e)
+        {
+            response.getWriter().println("Something went wrong. Could not mark Invoice as void");
+        }
+    }
+
     public static void markAsSent(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
         CommonMethods commonMethods = new CommonMethods();
@@ -880,7 +1006,7 @@ public class InvoiceMethods
         }
         else if(status.equals("void"))
         {
-            response.getWriter().println("voiding");
+            InvoiceMethods.markAsVoid(request, response);
         }
         else
         {
