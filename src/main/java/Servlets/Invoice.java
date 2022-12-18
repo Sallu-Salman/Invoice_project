@@ -18,19 +18,19 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 
-@WebServlet("/invoices/*")
+@WebServlet("/api/invoices/*")
 public class Invoice extends HttpServlet
 {
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        if(CommonMethods.invoiceFunctionPath(request.getPathInfo()))
+        if(!CommonMethods.emptyPath(request.getPathInfo()) && CommonMethods.invoiceFunctionPath(request.getPathInfo()))
         {
             //redirect to invoiceFunction
             InvoiceMethods.invoiceFunctionRedirect(request, response);
             return;
         }
 
-        if(CommonMethods.invoiceStatusPath(request.getPathInfo()))
+        if(!CommonMethods.emptyPath(request.getPathInfo()) && CommonMethods.invoiceStatusPath(request.getPathInfo()))
         {
             //redirect to status
             InvoiceMethods.invoiceStatusRedirect(request, response);

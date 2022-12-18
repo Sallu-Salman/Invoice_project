@@ -22,7 +22,7 @@ import com.google.gson.JsonObject;
 import sun.misc.IOUtils;
 
 
-@WebServlet("/contacts/*")
+@WebServlet("/api/contacts/*")
 public class Contact extends HttpServlet {
 
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException

@@ -19,7 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 
-@WebServlet("/items/*")
+@WebServlet("/api/items/*")
 public class Item extends HttpServlet
 {
     public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
