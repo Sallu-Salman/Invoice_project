@@ -17,11 +17,11 @@ public class Invoice_json
     public String terms_and_conditions;
     public String customer_notes;
 
-    public int sub_total;
-    public int tax;
-    public int discount;
-    public int charges;
-    public int total_cost;
+    public float sub_total;
+    public float tax;
+    public float discount;
+    public float charges;
+    public float total_cost;
 
     public String status;
     public JsonArray line_items;

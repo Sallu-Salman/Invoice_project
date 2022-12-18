@@ -17,20 +17,20 @@ public class ItemMethods
             PreparedStatement statement = connection.prepareStatement("INSERT INTO items(item_name, item_cost, item_quantity, stock_rate) VALUES (?,?,?,?);", Statement.RETURN_GENERATED_KEYS);
 
             statement.setString(1, item_json.item_name);
-            statement.setInt(2, item_json.item_cost);
+            statement.setFloat(2, item_json.item_cost);
             statement.setInt(3, item_json.item_quantity);
-            statement.setInt(4, item_json.stock_rate);
+            statement.setFloat(4, item_json.stock_rate);
 
             statement.executeUpdate();
 
             ResultSet set = statement.getGeneratedKeys();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Inventory asset';");
-            statement.setInt(1, (item_json.stock_rate* item_json.item_quantity));
+            statement.setFloat(1, (item_json.stock_rate* item_json.item_quantity));
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Owners Equity';");
-            statement.setInt(1, (item_json.stock_rate* item_json.item_quantity));
+            statement.setFloat(1, (item_json.stock_rate* item_json.item_quantity));
             statement.executeUpdate();
 
             if(set.next())
@@ -75,9 +75,9 @@ public class ItemMethods
 
                 item_jsons[i].item_id = rs.getLong("item_id");
                 item_jsons[i].item_name = rs.getString("item_name");
-                item_jsons[i].item_cost = rs.getInt("item_cost");
+                item_jsons[i].item_cost = rs.getFloat("item_cost");
                 item_jsons[i].item_quantity = rs.getInt("item_quantity");
-                item_jsons[i].stock_rate = rs.getInt("stock_rate");
+                item_jsons[i].stock_rate = rs.getFloat("stock_rate");
             }
 
             connection.close();
@@ -108,9 +108,9 @@ public class ItemMethods
             {
                 item_json.item_id = rs.getLong("item_id");
                 item_json.item_name = rs.getString("item_name");
-                item_json.item_cost = rs.getInt("item_cost");
+                item_json.item_cost = rs.getFloat("item_cost");
                 item_json.item_quantity = rs.getInt("item_quantity");
-                item_json.stock_rate = rs.getInt("stock_rate");
+                item_json.stock_rate = rs.getFloat("stock_rate");
             }
 
             connection.close();
@@ -129,8 +129,8 @@ public class ItemMethods
         Connection connection =  commonMethods.createConnection();
 
         int old_quantity = 0;
-        int old_stock_rate = 0;
-        int old_total_value = 0;
+        float old_stock_rate = 0;
+        float old_total_value = 0;
 
         try
         {
@@ -142,7 +142,7 @@ public class ItemMethods
             while (set.next())
             {
                 old_quantity = set.getInt("item_quantity");
-                old_stock_rate = set.getInt("stock_rate");
+                old_stock_rate = set.getFloat("stock_rate");
 
                 old_total_value = old_quantity * old_stock_rate;
             }
@@ -181,10 +181,10 @@ public class ItemMethods
         boolean key = true;
 
         int old_quantity = 0;
-        int old_stock_rate = 0;
-        int old_total_value = 0;
+        float old_stock_rate = 0;
+        float old_total_value = 0;
 
-        int new_total_value = 0;
+        float new_total_value = 0;
 
         boolean isQuantityChanged = false;
         boolean isStockRateChanged = false;
@@ -199,7 +199,7 @@ public class ItemMethods
             while (set.next())
             {
                 old_quantity = set.getInt("item_quantity");
-                old_stock_rate = set.getInt("stock_rate");
+                old_stock_rate = set.getFloat("stock_rate");
 
                 old_total_value = old_quantity * old_stock_rate;
             }

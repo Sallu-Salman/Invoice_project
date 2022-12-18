@@ -69,7 +69,7 @@ public class CommonMethods
         String[] splits = pathInfo.split("/");
         String modelId = splits[1];
 
-        long id = Integer.parseInt(modelId);
+        long id = Long.parseLong(modelId);
 
         return id;
     }
@@ -97,11 +97,11 @@ public class CommonMethods
         {
             jsonObject.remove("item_quantity");
         }
-        if(jsonObject.getInt("item_cost") < 0)
+        if(jsonObject.getFloat("item_cost") < 0)
         {
             jsonObject.remove("item_cost");
         }
-        if(jsonObject.getInt("stock_rate") < 0)
+        if(jsonObject.getFloat("stock_rate") < 0)
         {
             jsonObject.remove("stock_rate");
         }

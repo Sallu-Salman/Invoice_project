@@ -24,9 +24,9 @@ import java.util.List;
 
 public class InvoiceMethods
 {
-    public int findSubTotal(Item_json[] line_items)
+    public float findSubTotal(Item_json[] line_items)
     {
-        int subTotal = 0;
+        float subTotal = 0;
 
         for(Item_json item_json : line_items)
         {
@@ -85,10 +85,10 @@ public class InvoiceMethods
 
                     if(line_items[index].item_cost == 0)
                     {
-                        line_items[index].item_cost = set.getInt("item_cost");
+                        line_items[index].item_cost = set.getFloat("item_cost");
                     }
 
-                    line_items[index].stock_rate = set.getInt("stock_rate");
+                    line_items[index].stock_rate = set.getFloat("stock_rate");
                 }
 
                 itemIdIndexMapper.remove(set.getLong("item_id"));
@@ -296,8 +296,8 @@ public class InvoiceMethods
                 jsonObject.addProperty("invoice_date", set.getString("invoice_date"));
                 jsonObject.addProperty("customer_name", set.getString("contact_name"));
                 jsonObject.addProperty("status", set.getString("status"));
-                jsonObject.addProperty("amount", set.getInt("total_cost"));
-                jsonObject.addProperty("balance_due", (set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount")));
+                jsonObject.addProperty("amount", set.getFloat("total_cost"));
+                jsonObject.addProperty("balance_due", (set.getFloat("total_cost") - set.getFloat("payment_made") - set.getFloat("written_off_amount")));
 
                 jsonArray.add(jsonObject);
             }
@@ -370,15 +370,15 @@ public class InvoiceMethods
         }
     }
 
-    public int updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
+    public float updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
     {
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
         Filters filters = new Filters();
         Gson gson = new Gson();
-        int sub_total = 0;
-        int change_in_inventory_asset = 0;
+        float sub_total = 0;
+        float change_in_inventory_asset = 0;
 
         if(!filters.ifItemsExists(newLineItems))
         {
@@ -400,12 +400,12 @@ public class InvoiceMethods
             while(rs.next())
             {
                 JSONObject jsonObject = new JSONObject();
-                jsonObject.put("item_cost", rs.getInt("item_cost"));
+                jsonObject.put("item_cost", rs.getFloat("item_cost"));
                 jsonObject.put("item_quantity", rs.getInt("item_quantity"));
-                jsonObject.put("stock_rate", rs.getInt("stock_rate"));
+                jsonObject.put("stock_rate", rs.getFloat("stock_rate"));
                 jsonObject.put("item_id", rs.getLong("item_id"));
 
-                sub_total += (rs.getInt("item_cost") * rs.getInt("item_quantity"));
+                sub_total += (rs.getFloat("item_cost") * rs.getInt("item_quantity"));
 
                 existingLineItems.put(rs.getLong("line_item_id"), jsonObject);
             }
@@ -423,15 +423,15 @@ public class InvoiceMethods
                 {
                     JSONObject existingObject = existingLineItems.get(jsonObject.getLong("line_item_id"));
 
-                    if(jsonObject.getInt("item_cost") != existingObject.getInt("item_cost") || jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
+                    if(jsonObject.getFloat("item_cost") != existingObject.getFloat("item_cost") || jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
                     {
                         StringBuilder updateLineItemQuery = new StringBuilder("UPDATE line_items SET ");
                         boolean key = true;
 
-                        if(jsonObject.getInt("item_cost") != existingObject.getInt("item_cost"))
+                        if(jsonObject.getFloat("item_cost") != existingObject.getFloat("item_cost"))
                         {
                             key = commonMethods.conjunction(key, updateLineItemQuery);
-                            updateLineItemQuery.append("item_cost = "+jsonObject.getInt("item_cost"));
+                            updateLineItemQuery.append("item_cost = "+jsonObject.getFloat("item_cost"));
                         }
                         if(jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
                         {
@@ -442,7 +442,7 @@ public class InvoiceMethods
                             {
                                 int item_quantity =(jsonObject.getInt("item_quantity") - existingObject.getInt("item_quantity"));
 
-                                change_in_inventory_asset += (item_quantity * existingObject.getInt("stock_rate"));
+                                change_in_inventory_asset += (item_quantity * existingObject.getFloat("stock_rate"));
 
                                 item_quantity *= -1;
 
@@ -464,8 +464,8 @@ public class InvoiceMethods
                         statement = connection.prepareStatement(updateLineItemQuery.toString());
                         statement.executeUpdate();
 
-                        sub_total -= (existingObject.getInt("item_cost") * existingObject.getInt("item_quantity"));
-                        sub_total += (jsonObject.getInt("item_cost") * jsonObject.getInt("item_quantity"));
+                        sub_total -= (existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity"));
+                        sub_total += (jsonObject.getFloat("item_cost") * jsonObject.getInt("item_quantity"));
 
                     }
 
@@ -477,7 +477,6 @@ public class InvoiceMethods
             {
                 StringBuilder deleteLineItems = new StringBuilder("DELETE FROM line_items WHERE line_item_id IN ( ");
                 boolean key = true;
-                HashMap<Long, Integer> itemToBeReverted = new HashMap<Long, Integer>();
 
                 for(long removedLineItemId : existingLineItems.keySet())
                 {
@@ -486,13 +485,13 @@ public class InvoiceMethods
 
                     JSONObject existingObject = existingLineItems.get(removedLineItemId);
 
-                    sub_total -= (existingObject.getInt("item_cost") * existingObject.getInt("item_quantity"));
+                    sub_total -= (existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity"));
 
                     if(invoice_status.equals("SENT"))
                     {
                         int item_quantity = existingObject.getInt("item_quantity");
 
-                        change_in_inventory_asset -= (item_quantity * existingObject.getInt("stock_rate"));
+                        change_in_inventory_asset -= (item_quantity * existingObject.getFloat("stock_rate"));
 
                         if(updateItemHash.containsKey(existingObject.getLong("item_id")))
                         {
@@ -522,8 +521,6 @@ public class InvoiceMethods
                 {
                     //Reduce the item quantity in items table
 
-                    HashMap<Long, Integer> itemToBeAdded = new HashMap<Long, Integer>();
-
                     for(Item_json item_json : insertingLineItems)
                     {
                         change_in_inventory_asset += (item_json.item_quantity * item_json.stock_rate);
@@ -548,11 +545,11 @@ public class InvoiceMethods
             if(change_in_inventory_asset != 0)
             {
                 statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Inventory asset';");
-                statement.setInt(1, change_in_inventory_asset);
+                statement.setFloat(1, change_in_inventory_asset);
                 statement.executeUpdate();
 
                 statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Cost of Goods Sold';");
-                statement.setInt(1, change_in_inventory_asset);
+                statement.setFloat(1, change_in_inventory_asset);
                 statement.executeUpdate();
             }
 
@@ -583,7 +580,7 @@ public class InvoiceMethods
         Filters filters = new Filters();
 
         boolean isTotalChanged = false;
-        int old_total_cost = 0;
+        float old_total_cost = 0;
 
         try
         {
@@ -648,7 +645,7 @@ public class InvoiceMethods
             }
             if(inputJson.has("line_items"))
             {
-                int newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
+                float newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
 
                 if(newSubTotal == 0)
                 {
@@ -661,24 +658,24 @@ public class InvoiceMethods
             if(inputJson.has("sub_total"))
             {
                 key = commonMethods.conjunction(key, invoiceUpdateQuery);
-                invoiceUpdateQuery.append("sub_total = " + inputJson.getInt("sub_total"));
+                invoiceUpdateQuery.append("sub_total = " + inputJson.getFloat("sub_total"));
             }
             if(inputJson.has("tax"))
             {
                 key = commonMethods.conjunction(key, invoiceUpdateQuery);
-                invoiceUpdateQuery.append("tax = " + inputJson.getInt("tax"));
+                invoiceUpdateQuery.append("tax = " + inputJson.getFloat("tax"));
                 isTotalChanged = true;
             }
             if(inputJson.has("discount"))
             {
                 key = commonMethods.conjunction(key, invoiceUpdateQuery);
-                invoiceUpdateQuery.append("discount = " + inputJson.getInt("discount"));
+                invoiceUpdateQuery.append("discount = " + inputJson.getFloat("discount"));
                 isTotalChanged = true;
             }
             if(inputJson.has("charges"))
             {
                 key = commonMethods.conjunction(key, invoiceUpdateQuery);
-                invoiceUpdateQuery.append("charges = " + inputJson.getInt("charges"));
+                invoiceUpdateQuery.append("charges = " + inputJson.getFloat("charges"));
                 isTotalChanged = true;
             }
             if(isTotalChanged)
@@ -695,7 +692,7 @@ public class InvoiceMethods
 
                     while(set.next())
                     {
-                        old_total_cost = set.getInt("total_cost");
+                        old_total_cost = set.getFloat("total_cost");
                     }
                 }
             }
@@ -719,7 +716,7 @@ public class InvoiceMethods
 
                 while(set.next())
                 {
-                    InvoiceMethods.updateSalesAccount(old_total_cost, set.getInt("total_cost"));
+                    InvoiceMethods.updateSalesAccount(old_total_cost, set.getFloat("total_cost"));
                 }
             }
 
@@ -738,7 +735,7 @@ public class InvoiceMethods
 
     }
 
-    public static void updateSalesAccount(int old_total, int new_total)
+    public static void updateSalesAccount(float old_total, float new_total)
     {
         CommonMethods commonMethods = new CommonMethods();
         Connection connection =  commonMethods.createConnection();
@@ -746,13 +743,13 @@ public class InvoiceMethods
         try
         {
             PreparedStatement statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? + ? WHERE account_name = 'Sales';");
-            statement.setInt(1, old_total);
-            statement.setInt(2, new_total);
+            statement.setFloat(1, old_total);
+            statement.setFloat(2, new_total);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? + ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, old_total);
-            statement.setInt(2, new_total);
+            statement.setFloat(1, old_total);
+            statement.setFloat(2, new_total);
             statement.executeUpdate();
         }
         catch (SQLException e)
@@ -803,9 +800,9 @@ public class InvoiceMethods
                 lineItemObject.addProperty("line_item_id" , rs.getLong("line_item_id"));
                 lineItemObject.addProperty("item_id", rs.getLong("item_id"));
                 lineItemObject.addProperty("item_name", rs.getString("item_name"));
-                lineItemObject.addProperty("item_cost", rs.getInt("item_cost"));
+                lineItemObject.addProperty("item_cost", rs.getFloat("item_cost"));
                 lineItemObject.addProperty("item_quantity", rs.getInt("item_quantity"));
-                lineItemObject.addProperty("amount", (rs.getInt("item_cost") * rs.getInt("item_quantity")));
+                lineItemObject.addProperty("amount", (rs.getFloat("item_cost") * rs.getInt("item_quantity")));
 
                 jsonArray.add(lineItemObject);
 
@@ -815,33 +812,33 @@ public class InvoiceMethods
 
             rs.previous();
 
-            responseJson.addProperty("sub_total", rs.getInt("sub_total"));
+            responseJson.addProperty("sub_total", rs.getFloat("sub_total"));
 
-            if(rs.getInt("tax") != 0)
+            if(rs.getFloat("tax") != 0)
             {
-                responseJson.addProperty("tax", rs.getInt("tax"));
+                responseJson.addProperty("tax", rs.getFloat("tax"));
             }
-            if(rs.getInt("discount") != 0)
+            if(rs.getFloat("discount") != 0)
             {
-                responseJson.addProperty("discount", rs.getInt("discount"));
+                responseJson.addProperty("discount", rs.getFloat("discount"));
             }
-            if(rs.getInt("charges") != 0)
+            if(rs.getFloat("charges") != 0)
             {
-                responseJson.addProperty("charges", rs.getInt("charges"));
-            }
-
-            responseJson.addProperty("total_cost", rs.getInt("total_cost"));
-
-            if(rs.getInt("payment_made") != 0)
-            {
-                responseJson.addProperty("payment_made", rs.getInt("payment_made"));
-            }
-            if(rs.getInt("written_off_amount") != 0)
-            {
-                responseJson.addProperty("written_off_amount" , rs.getInt("written_off_amount"));
+                responseJson.addProperty("charges", rs.getFloat("charges"));
             }
 
-            responseJson.addProperty("balance_due", (rs.getInt("total_cost") -  rs.getInt("payment_made") - rs.getInt("written_off_amount")));
+            responseJson.addProperty("total_cost", rs.getFloat("total_cost"));
+
+            if(rs.getFloat("payment_made") != 0)
+            {
+                responseJson.addProperty("payment_made", rs.getFloat("payment_made"));
+            }
+            if(rs.getFloat("written_off_amount") != 0)
+            {
+                responseJson.addProperty("written_off_amount" , rs.getFloat("written_off_amount"));
+            }
+
+            responseJson.addProperty("balance_due", (rs.getFloat("total_cost") -  rs.getFloat("payment_made") - rs.getFloat("written_off_amount")));
 
             if(rs.getString("customer_notes") != null)
             {
@@ -914,7 +911,7 @@ public class InvoiceMethods
         Connection connection = commonMethods.createConnection();
         InvoiceMethods invoiceMethods = new InvoiceMethods();
 
-        int sales = 0;
+        float sales = 0;
 
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT total_cost from invoices where invoice_id  = ?;");
@@ -923,7 +920,7 @@ public class InvoiceMethods
 
             while (set.next())
             {
-                sales = set.getInt("total_cost");
+                sales = set.getFloat("total_cost");
             }
 
             InvoiceMethods.revertItemsSent(invoice_id, sales);
@@ -939,11 +936,11 @@ public class InvoiceMethods
 
     }
 
-    public static void revertItemsSent(long invoice_id, int sales) throws IOException
+    public static void revertItemsSent(long invoice_id, float sales) throws IOException
     {
         CommonMethods commonMethods = new CommonMethods();
         Connection connection = commonMethods.createConnection();
-        int cost_of_goods_sold = 0;
+        float cost_of_goods_sold = 0;
 
         try
         {
@@ -952,7 +949,7 @@ public class InvoiceMethods
             ResultSet set = statement.executeQuery();
 
             HashMap<Long, Integer> itemQuantityInInvoice = new HashMap<Long, Integer>();
-            HashMap<Long, Integer> itemIdStockRate = new HashMap<Long, Integer>();
+            HashMap<Long, Float> itemIdStockRate = new HashMap<Long, Float>();
 
             while (set.next())
             {
@@ -965,7 +962,7 @@ public class InvoiceMethods
                 }
 
                 itemQuantityInInvoice.put(set.getLong("item_id"), quantity);
-                itemIdStockRate.put(set.getLong("item_id"), set.getInt("stock_rate"));
+                itemIdStockRate.put(set.getLong("item_id"), set.getFloat("stock_rate"));
             }
 
             //Increase the item quantity in items table
@@ -995,19 +992,19 @@ public class InvoiceMethods
             }
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Inventory asset';");
-            statement.setInt(1, cost_of_goods_sold);
+            statement.setFloat(1, cost_of_goods_sold);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Cost of Goods Sold';");
-            statement.setInt(1, cost_of_goods_sold);
+            statement.setFloat(1, cost_of_goods_sold);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Sales';");
-            statement.setInt(1, sales);
+            statement.setFloat(1, sales);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, sales);
+            statement.setFloat(1, sales);
             statement.executeUpdate();
 
         }
@@ -1034,8 +1031,8 @@ public class InvoiceMethods
             PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
-            int sales = 0;
-            int cost_of_goods_sold = 0;
+            float sales = 0;
+            float cost_of_goods_sold = 0;
 
             while (set.next()) {
 
@@ -1059,7 +1056,7 @@ public class InvoiceMethods
                     return;
                 }
 
-                sales = set.getInt("total_cost");
+                sales = set.getFloat("total_cost");
             }
 
             InvoiceMethods.revertItemsSent(invoice_id, sales);
@@ -1100,8 +1097,8 @@ public class InvoiceMethods
             PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
-            int sales = 0;
-            int cost_of_goods_sold = 0;
+            float sales = 0;
+            float cost_of_goods_sold = 0;
 
             while (set.next())
             {
@@ -1110,7 +1107,7 @@ public class InvoiceMethods
                     response.getWriter().println("Only Invoice in Draft state can be marked as Sent");
                     return;
                 }
-                sales = set.getInt("total_cost");
+                sales = set.getFloat("total_cost");
             }
 
             //Getting quantity of each line item
@@ -1158,11 +1155,11 @@ public class InvoiceMethods
             statement = connection.prepareStatement("SELECT item_id, stock_rate FROM items WHERE item_id IN ( " + reducedItemIds + " );");
             set = statement.executeQuery();
 
-            HashMap<Long, Integer> itemIdStockRate = new HashMap<Long, Integer>();
+            HashMap<Long, Float> itemIdStockRate = new HashMap<Long, Float>();
 
             while(set.next())
             {
-                itemIdStockRate.put(set.getLong("item_id"), set.getInt("stock_rate"));
+                itemIdStockRate.put(set.getLong("item_id"), set.getFloat("stock_rate"));
             }
 
             //Update current stock rate to each line item
@@ -1184,19 +1181,19 @@ public class InvoiceMethods
             //Update chart of accounts
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Inventory asset';");
-            statement.setInt(1, cost_of_goods_sold);
+            statement.setFloat(1, cost_of_goods_sold);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Cost of Goods Sold';");
-            statement.setInt(1, cost_of_goods_sold);
+            statement.setFloat(1, cost_of_goods_sold);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Sales';");
-            statement.setInt(1, sales);
+            statement.setFloat(1, sales);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, sales);
+            statement.setFloat(1, sales);
             statement.executeUpdate();
 
             //Update invoice status as 'Sent'
@@ -1233,12 +1230,12 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
-            int payment_made = 0;
+            float payment_made = 0;
             String newStatus = "SENT";
 
             while (set.next()) {
 
-                payment_made = set.getInt("payment_made");
+                payment_made = set.getFloat("payment_made");
 
                 if(!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || payment_made == 0)
                 {
@@ -1246,7 +1243,7 @@ public class InvoiceMethods
                     return;
                 }
 
-                if(set.getInt("written_off_amount") != 0)
+                if(set.getFloat("written_off_amount") != 0)
                 {
                     newStatus = "PARTIALLY PAID";
                 }
@@ -1262,11 +1259,11 @@ public class InvoiceMethods
             //Update chart of accounts
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, payment_made);
+            statement.setFloat(1, payment_made);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Petty cash';");
-            statement.setInt(1, payment_made);
+            statement.setFloat(1, payment_made);
             statement.executeUpdate();
 
             response.getWriter().println("Invoice payment deleted successfully");
@@ -1296,19 +1293,19 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
-            int written_off_amount = 0;
+            float written_off_amount = 0;
             String newStatus = "SENT";
 
             while (set.next()) {
 
-                written_off_amount = set.getInt("written_off_amount");
+                written_off_amount = set.getFloat("written_off_amount");
 
                 if (!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || written_off_amount == 0) {
                     response.getWriter().println("No write offs available");
                     return;
                 }
 
-                if (set.getInt("payment_made") != 0) {
+                if (set.getFloat("payment_made") != 0) {
                     newStatus = "PARTIALLY PAID";
                 }
             }
@@ -1323,11 +1320,11 @@ public class InvoiceMethods
             //Update chart of accounts
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, written_off_amount);
+            statement.setFloat(1, written_off_amount);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Bad debt';");
-            statement.setInt(1, written_off_amount);
+            statement.setFloat(1, written_off_amount);
             statement.executeUpdate();
 
             response.getWriter().println("The write off done for this Invoice has been cancelled");
@@ -1358,7 +1355,7 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
-            int balance_due = 0;
+            float balance_due = 0;
 
             while (set.next()) {
                 if (set.getString("status").equals("VOID")) {
@@ -1370,7 +1367,7 @@ public class InvoiceMethods
                     return;
                 }
 
-                balance_due = set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount");
+                balance_due = set.getFloat("total_cost") - set.getFloat("payment_made") - set.getFloat("written_off_amount");
             }
 
             if(balance_due == 0)
@@ -1383,18 +1380,18 @@ public class InvoiceMethods
 
             statement = connection.prepareStatement("UPDATE invoices SET status = ?, written_off_amount = written_off_amount + ? where invoice_id = ? ;");
             statement.setString(1, "PAID" );
-            statement.setInt(2, balance_due);
+            statement.setFloat(2, balance_due);
             statement.setLong(3, invoice_id);
             statement.executeUpdate();
 
             //Update chart of accounts
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Accounts Receivable';");
-            statement.setInt(1, balance_due);
+            statement.setFloat(1, balance_due);
             statement.executeUpdate();
 
             statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Bad debt';");
-            statement.setInt(1, balance_due);
+            statement.setFloat(1, balance_due);
             statement.executeUpdate();
 
             response.getWriter().println("Invoice has been written off successfully");
@@ -1444,14 +1441,12 @@ public class InvoiceMethods
             return;
         }
 
-        JSONObject bodyJson = commonMethods.getBodyJson(request);
-
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT status, total_cost, payment_made, written_off_amount from invoices where invoice_id  = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
-            int balance_due = 0;
+            float balance_due = 0;
 
             while (set.next())
             {
@@ -1464,14 +1459,16 @@ public class InvoiceMethods
                     return;
                 }
 
-                balance_due = set.getInt("total_cost") - set.getInt("payment_made") - set.getInt("written_off_amount");
+                balance_due = set.getFloat("total_cost") - set.getFloat("payment_made") - set.getFloat("written_off_amount");
             }
 
-            if(bodyJson.getInt("amount_received") <= 0)
+            JSONObject bodyJson = commonMethods.getBodyJson(request);
+
+            if(bodyJson.getFloat("amount_received") <= 0)
             {
                 response.getWriter().println("Incorrect value entered as amount");
             }
-            else if(balance_due == 0 || bodyJson.getInt("amount_received") > balance_due)
+            else if(balance_due == 0 || bodyJson.getFloat("amount_received") > balance_due)
             {
                 response.getWriter().println("Excess amount entered");
             }
@@ -1480,7 +1477,7 @@ public class InvoiceMethods
             {
                 String newStatus;
 
-                if(bodyJson.getInt("amount_received") == balance_due)
+                if(bodyJson.getFloat("amount_received") == balance_due)
                 {
                     newStatus = "PAID";
                 }
@@ -1493,18 +1490,18 @@ public class InvoiceMethods
 
                 statement = connection.prepareStatement("UPDATE invoices SET status = ?, payment_made = payment_made + ? where invoice_id = ? ;");
                 statement.setString(1, newStatus );
-                statement.setInt(2, bodyJson.getInt("amount_received"));
+                statement.setFloat(2, bodyJson.getFloat("amount_received"));
                 statement.setLong(3, invoice_id);
                 statement.executeUpdate();
 
                 //Update chart of accounts
 
                 statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Accounts Receivable';");
-                statement.setInt(1, bodyJson.getInt("amount_received"));
+                statement.setFloat(1, bodyJson.getFloat("amount_received"));
                 statement.executeUpdate();
 
                 statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit + ? WHERE account_name = 'Petty cash';");
-                statement.setInt(1, bodyJson.getInt("amount_received"));
+                statement.setFloat(1, bodyJson.getFloat("amount_received"));
                 statement.executeUpdate();
 
                 response.getWriter().println("Payment recorded successfully");

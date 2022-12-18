@@ -244,7 +244,7 @@ public class Filters {
 
         if(jsonObject.has("item_cost"))
         {
-            item_json.item_cost = jsonObject.getInt("item_cost");
+            item_json.item_cost = jsonObject.getFloat("item_cost");
         }
         else
         {
@@ -253,7 +253,7 @@ public class Filters {
 
         if(jsonObject.has("stock_rate"))
         {
-            item_json.stock_rate = jsonObject.getInt("stock_rate");
+            item_json.stock_rate = jsonObject.getFloat("stock_rate");
         }
         else
         {

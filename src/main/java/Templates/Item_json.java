@@ -4,8 +4,8 @@ public class Item_json
 {
     public long item_id;
     public String item_name;
-    public int item_cost;
+    public float item_cost;
     public int item_quantity;
 
-    public int stock_rate;
+    public float stock_rate;
 }
