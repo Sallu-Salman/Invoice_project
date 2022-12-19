@@ -1530,7 +1530,7 @@ public class InvoiceMethods
         }
 
         try {
-            PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT status, contacts.contact_name as customer_name, contacts.contact_email as customer_email, invoice_date, total_cost FROM invoices INNER JOIN contacts ON contacts.contact_id = invoices.customer_id  WHERE invoices.invoice_id = ?;");
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
 
@@ -1545,10 +1545,12 @@ public class InvoiceMethods
                 {
                     InvoiceMethods.markAsSent(request, response);
                 }
+
+                CommonMethods.sendEmail(invoice_id, set.getString("customer_name"),set.getString("customer_email"), set.getInt("total_cost"), set.getString("invoice_date"));
             }
 
+            response.getWriter().println("Email sent successfully");
 
-            // Email the invoice
 
         } catch (SQLException e)
         {

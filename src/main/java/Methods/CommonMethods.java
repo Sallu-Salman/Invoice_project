@@ -1,6 +1,11 @@
 package Methods;
 
+import models.SendEnhancedRequestBody;
+import models.SendEnhancedResponseBody;
+import models.SendRequestMessage;
 import org.json.JSONObject;
+import services.Courier;
+import services.SendService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.BufferedReader;
@@ -8,6 +13,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.HashMap;
 
 public class CommonMethods
 {
@@ -107,5 +113,36 @@ public class CommonMethods
         }
 
         return jsonObject.toString();
+    }
+
+    public static void sendEmail(long invoice_id, String customer_name, String customer_email, int total_cost, String invoice_date)
+    {
+        Courier.init("pk_prod_2HQDMJRGV8M9Z2HQA1ABRBDTMQ3N");
+
+        SendEnhancedRequestBody requestBody = new SendEnhancedRequestBody();
+        SendRequestMessage sendRequestMessage = new SendRequestMessage();
+
+        HashMap<String, String> to = new HashMap<String, String>();
+        to.put("email", customer_email);
+        sendRequestMessage.setTo(to);
+        sendRequestMessage.setTemplate("TGJENRVNNK4ZMGH5FW94MPCPM8JK");
+
+
+        HashMap<String, Object> data = new HashMap<String, Object>();
+        data.put("invoice_id", invoice_id);
+        data.put("invoice_amount", total_cost);
+        data.put("invoice_date", invoice_date);
+        data.put("customer_name", customer_name);
+        sendRequestMessage.setData(data);
+
+        requestBody.setMessage(sendRequestMessage);
+        try
+        {
+            SendEnhancedResponseBody responseBody = new SendService().sendEnhancedMessage(requestBody);
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 }
