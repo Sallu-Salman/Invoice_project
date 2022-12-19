@@ -7,10 +7,10 @@ import java.sql.*;
 
 public class ItemMethods
 {
-    public long createNewItem(Item_json item_json)
+    public static long createNewItem(Item_json item_json)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -49,11 +49,11 @@ public class ItemMethods
         }
     }
 
-    public Item_json[] getItemsDetails()
+    public static Item_json[] getItemsDetails()
     {
-        CommonMethods commonMethods = new CommonMethods();
 
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
         int rows = 1;
 
         try
@@ -89,12 +89,12 @@ public class ItemMethods
         }
     }
 
-    public Item_json getItemDetails(long item_id)
+    public static Item_json getItemDetails(long item_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
+
         Item_json item_json = new Item_json();
 
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -123,10 +123,10 @@ public class ItemMethods
         }
     }
 
-    public int deleteItem(long item_id)
+    public static int deleteItem(long item_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         int old_quantity = 0;
         float old_stock_rate = 0;
@@ -171,10 +171,10 @@ public class ItemMethods
 
     }
 
-    public int updateItem(Item_json item_json)
+    public static int updateItem(Item_json item_json)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
 
         StringBuilder query = new StringBuilder("UPDATE items SET ");
@@ -206,21 +206,21 @@ public class ItemMethods
 
             if(item_json.item_name != null)
             {
-                key = commonMethods.conjunction(key, query);
+                key = CommonMethods.conjunction(key, query);
 
                 query.append(" item_name = '"+item_json.item_name + "' ");
             }
 
             if(item_json.item_cost >= 0)
             {
-                key = commonMethods.conjunction(key, query);
+                key = CommonMethods.conjunction(key, query);
 
                 query.append(" item_cost = "+item_json.item_cost );
             }
 
             if(item_json.item_quantity >= 0)
             {
-                key = commonMethods.conjunction(key, query);
+                key = CommonMethods.conjunction(key, query);
 
                 query.append(" item_quantity = " + item_json.item_quantity);
 
@@ -231,7 +231,7 @@ public class ItemMethods
 
             if(item_json.stock_rate >=  0)
             {
-                commonMethods.conjunction(key, query);
+                CommonMethods.conjunction(key, query);
 
                 query.append(" stock_rate = " + item_json.stock_rate);
 

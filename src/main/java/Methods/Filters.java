@@ -10,7 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Filters {
-    public boolean checkPhoneNumber(String phoneNumber) {
+    public static boolean checkPhoneNumber(String phoneNumber) {
         String regex = "((\\+*)((0[ -]*)*|((91 )*))((\\d{12})+|(\\d{10})+))|\\d{5}([- ]*)\\d{6}";
 
         Pattern p = Pattern.compile(regex);
@@ -20,7 +20,7 @@ public class Filters {
         return m.matches();
     }
 
-    public boolean checkEmail(String email) {
+    public static boolean checkEmail(String email) {
         String regex = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
 
         Pattern p = Pattern.compile(regex);
@@ -30,28 +30,28 @@ public class Filters {
         return m.matches();
     }
 
-    public boolean checkContact(Contact_json contact_json) {
-        Filters filters = new Filters();
+    public static boolean checkContact(Contact_json contact_json) {
+
 
         if (contact_json.contact_name == null && contact_json.contact_email == null && contact_json.contact_phone == null) {
             return false;
         }
 
-        if (contact_json.contact_phone != null && !filters.checkPhoneNumber(contact_json.contact_phone)) {
+        if (contact_json.contact_phone != null && !Filters.checkPhoneNumber(contact_json.contact_phone)) {
             return false;
         }
 
-        if (contact_json.contact_email != null && !filters.checkEmail(contact_json.contact_email)) {
+        if (contact_json.contact_email != null && !Filters.checkEmail(contact_json.contact_email)) {
             return false;
         }
 
         return true;
     }
 
-    public boolean ifSalespersonExists(long salesperson_id)
+    public static boolean ifSalespersonExists(long salesperson_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try
         {
@@ -78,10 +78,10 @@ public class Filters {
         }
     }
 
-    public boolean ifItemsExists(JSONArray newLineItems)
+    public static boolean ifItemsExists(JSONArray newLineItems)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
         HashSet<Long> item_ids = new HashSet<Long>();
 
         StringBuilder query = new StringBuilder("SELECT COUNT(*) as total FROM items WHERE item_id IN (");
@@ -101,7 +101,7 @@ public class Filters {
                 continue;
             }
 
-            key = commonMethods.conjunction(key, query);
+            key = CommonMethods.conjunction(key, query);
             query.append(jsonObject.getLong("item_id"));
             item_ids.add(jsonObject.getLong("item_id"));
         }
@@ -138,10 +138,10 @@ public class Filters {
 
     }
 
-    public boolean ifInvoiceExists(long invoice_id)
+    public static boolean ifInvoiceExists(long invoice_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try
         {
@@ -168,10 +168,10 @@ public class Filters {
         }
     }
 
-    public boolean ifCustomerExists(long contact_id)
+    public static boolean ifCustomerExists(long contact_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try
         {
@@ -198,10 +198,10 @@ public class Filters {
         }
     }
 
-    public boolean ifItemExists(long item_id)
+    public static boolean ifItemExists(long item_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try
         {
@@ -229,7 +229,7 @@ public class Filters {
     }
 
 
-    public Item_json checkAndLoadItem(JSONObject jsonObject)
+    public static Item_json checkAndLoadItem(JSONObject jsonObject)
     {
         Item_json item_json = new Item_json();
 
@@ -268,7 +268,7 @@ public class Filters {
         return item_json;
     }
 
-    public boolean checkSubject (String subject)
+    public static boolean checkSubject (String subject)
     {
         if(subject.length() > 200)
         {
@@ -278,7 +278,7 @@ public class Filters {
         return true;
     }
 
-    public boolean checkTermsAndConditions (String termsAndConditions)
+    public static boolean checkTermsAndConditions (String termsAndConditions)
     {
         if(termsAndConditions.length() > 200)
         {
@@ -287,7 +287,7 @@ public class Filters {
 
         return true;
     }
-    public boolean checkCustomerNotes (String customerNotes)
+    public static boolean checkCustomerNotes (String customerNotes)
     {
         if(customerNotes.length() > 200)
         {

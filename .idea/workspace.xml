@@ -4,10 +4,16 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="df284067-410b-4fde-8fb9-dceec6f5b0b6" name="Changes" comment="CRUD for Items">
+    <list default="true" id="df284067-410b-4fde-8fb9-dceec6f5b0b6" name="Changes" comment="Send actual email">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Methods/CommonMethods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/CommonMethods.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Methods/ContactMethods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/ContactMethods.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Methods/Filters.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/Filters.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/Methods/InvoiceMethods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/InvoiceMethods.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Methods/ItemMethods.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Methods/ItemMethods.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Servlets/Contact.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Servlets/Contact.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Servlets/Invoice.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Servlets/Invoice.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/Servlets/Item.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/Servlets/Item.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,7 +108,14 @@
       <option name="project" value="LOCAL" />
       <updated>1670747295921</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Send actual email">
+      <created>1671425300292</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1671425300292</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -131,6 +144,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="CRUD for Contacts" />
     <MESSAGE value="CRUD for Items" />
-    <option name="LAST_COMMIT_MESSAGE" value="CRUD for Items" />
+    <MESSAGE value="Send actual email" />
+    <option name="LAST_COMMIT_MESSAGE" value="Send actual email" />
   </component>
 </project>

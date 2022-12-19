@@ -35,17 +35,16 @@ public class Contact extends HttpServlet {
 
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
-        Filters filters = new Filters();
-        ContactMethods contactMethods = new ContactMethods();
+
 
         Contact_json contact_json = gson.fromJson(reader, Contact_json.class);
-        if(!filters.checkContact(contact_json))
+        if(!Filters.checkContact(contact_json))
         {
             response.getWriter().println("Invalid data passed !");
             return;
         }
 
-        long generatedContactId = contactMethods.createNewContact(contact_json);
+        long generatedContactId = ContactMethods.createNewContact(contact_json);
 
         if(generatedContactId == -1)
         {
@@ -74,20 +73,20 @@ public class Contact extends HttpServlet {
             return;
         }
 
-        ContactMethods contactMethods = new ContactMethods();
-        CommonMethods commonMethods = new CommonMethods();
+
+
 
         String responseJson;
 
         if (CommonMethods.emptyPath(request.getPathInfo()))
         {
-            Contact_json[] contact_jsons = contactMethods.getContactsDetails();
+            Contact_json[] contact_jsons = ContactMethods.getContactsDetails();
             responseJson = new Gson().toJson(contact_jsons);
         }
         else
         {
-            long contact_id = commonMethods.parseId(request);
-            Contact_json contact_json = contactMethods.getContactDetails(contact_id);
+            long contact_id = CommonMethods.parseId(request);
+            Contact_json contact_json = ContactMethods.getContactDetails(contact_id);
 
             if(contact_json.contact_name == null)
             {
@@ -112,12 +111,12 @@ public class Contact extends HttpServlet {
             return;
         }
 
-        ContactMethods contactMethods = new ContactMethods();
-        CommonMethods commonMethods = new CommonMethods();
 
-        long contact_id = commonMethods.parseId(request);
 
-        if(contactMethods.deleteContact(contact_id) == 0)
+
+        long contact_id = CommonMethods.parseId(request);
+
+        if(ContactMethods.deleteContact(contact_id) == 0)
         {
             response.getWriter().println("Something went wrong !\nContact was not deleted");
         }
@@ -136,22 +135,21 @@ public class Contact extends HttpServlet {
             return;
         }
 
-        ContactMethods contactMethods = new ContactMethods();
-        CommonMethods commonMethods = new CommonMethods();
+
+
 
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
-        Filters filters = new Filters();
         Contact_json contact_json = gson.fromJson(reader, Contact_json.class);
 
-        if(!filters.checkContact(contact_json))
+        if(!Filters.checkContact(contact_json))
         {
             response.getWriter().println("Invalid data passed !");
             return;
         }
-        contact_json.contact_id = commonMethods.parseId(request);
+        contact_json.contact_id = CommonMethods.parseId(request);
 
-        if(contactMethods.updateContact(contact_json) == 0)
+        if(ContactMethods.updateContact(contact_json) == 0)
         {
             response.getWriter().println("Something went wrong !\nContact was not updated");
         }

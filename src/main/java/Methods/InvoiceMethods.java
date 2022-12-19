@@ -24,7 +24,7 @@ import java.util.List;
 
 public class InvoiceMethods
 {
-    public float findSubTotal(Item_json[] line_items)
+    public static float findSubTotal(Item_json[] line_items)
     {
         float subTotal = 0;
 
@@ -36,10 +36,10 @@ public class InvoiceMethods
         return subTotal;
     }
 
-    public Item_json[] fetchLineItemsDetails(Item_json[] line_items)
+    public static Item_json[] fetchLineItemsDetails(Item_json[] line_items)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         StringBuilder query = new StringBuilder("SELECT item_id, item_name, item_cost, stock_rate FROM items WHERE item_id IN ( ");
         boolean key = true;
@@ -49,7 +49,7 @@ public class InvoiceMethods
 
         for(int i=0; i< line_items.length; i++)
         {
-            key = commonMethods.conjunction(key, query);
+            key = CommonMethods.conjunction(key, query);
             query.append(line_items[i].item_id);
             ArrayList<Integer> itemIdList;
 
@@ -111,7 +111,7 @@ public class InvoiceMethods
         return line_items;
     }
 
-    public String buildInvoiceQuery(Invoice_json invoice_json)
+    public static String buildInvoiceQuery(Invoice_json invoice_json)
     {
         StringBuilder query = new StringBuilder("INSERT INTO invoices ( customer_id, invoice_date, ");
         StringBuilder values = new StringBuilder();
@@ -164,10 +164,10 @@ public class InvoiceMethods
         return query.toString();
     }
 
-    public boolean storeLineItems(Item_json[] lineItems, long invoice_id)
+    public static boolean storeLineItems(Item_json[] lineItems, long invoice_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         StringBuilder query = new StringBuilder("INSERT INTO line_items (invoice_id, item_id, item_name, item_cost, item_quantity, stock_rate) VALUES ");
         boolean key = true;
@@ -176,7 +176,7 @@ public class InvoiceMethods
         {
             if(lineItem.item_name != null)
             {
-                key = commonMethods.conjunction(key, query);
+                key = CommonMethods.conjunction(key, query);
 
                 StringBuilder values = new StringBuilder();
 
@@ -214,23 +214,22 @@ public class InvoiceMethods
         }
     }
 
-    public long raiseInvoice(Invoice_json invoice_json)
+    public static long raiseInvoice(Invoice_json invoice_json)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        Filters filters = new Filters();
 
-        if(!filters.ifCustomerExists(invoice_json.customer_id))
+        Connection connection =  CommonMethods.createConnection();
+
+
+        if(!Filters.ifCustomerExists(invoice_json.customer_id))
         {
             return -1;
         }
-        if(invoice_json.salesperson_id != 0 && !filters.ifSalespersonExists(invoice_json.salesperson_id))
+        if(invoice_json.salesperson_id != 0 && !Filters.ifSalespersonExists(invoice_json.salesperson_id))
         {
             return -1;
         }
 
-        String query = invoiceMethods.buildInvoiceQuery(invoice_json);
+        String query = InvoiceMethods.buildInvoiceQuery(invoice_json);
 
         try
         {
@@ -255,10 +254,10 @@ public class InvoiceMethods
         }
     }
 
-    public int deleteInvoice(long invoice_id)
+    public static int deleteInvoice(long invoice_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -275,10 +274,10 @@ public class InvoiceMethods
         }
     }
 
-    public String getInvoicesDetails()
+    public static String getInvoicesDetails()
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         JsonArray jsonArray = new JsonArray();
 
@@ -311,7 +310,7 @@ public class InvoiceMethods
         }
     }
 
-    public JSONObject readBodyJson(HttpServletRequest request)
+    public static JSONObject readBodyJson(HttpServletRequest request)
     {
         StringBuilder stringBuilder = new StringBuilder();
         BufferedReader reader;
@@ -342,8 +341,8 @@ public class InvoiceMethods
 
     public static void updateSentInvoiceItems(HashMap<Long,Integer> item_id_hash)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try
         {
@@ -355,7 +354,7 @@ public class InvoiceMethods
             for(long item_id : item_id_hash.keySet())
             {
                 itemQuery.append(" WHEN " + item_id + " THEN item_quantity + " + item_id_hash.get(item_id));
-                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+                reducedIdKey = CommonMethods.conjunction(reducedIdKey, reducedItemIds);
                 reducedItemIds.append(item_id);
             }
 
@@ -370,17 +369,16 @@ public class InvoiceMethods
         }
     }
 
-    public float updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
+    public static float updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        Filters filters = new Filters();
+
+        Connection connection = CommonMethods.createConnection();
+
         Gson gson = new Gson();
         float sub_total = 0;
         float change_in_inventory_asset = 0;
 
-        if(!filters.ifItemsExists(newLineItems))
+        if(!Filters.ifItemsExists(newLineItems))
         {
             return 0;
         }
@@ -430,12 +428,12 @@ public class InvoiceMethods
 
                         if(jsonObject.getFloat("item_cost") != existingObject.getFloat("item_cost"))
                         {
-                            key = commonMethods.conjunction(key, updateLineItemQuery);
+                            key = CommonMethods.conjunction(key, updateLineItemQuery);
                             updateLineItemQuery.append("item_cost = "+jsonObject.getFloat("item_cost"));
                         }
                         if(jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
                         {
-                            commonMethods.conjunction(key, updateLineItemQuery);
+                            CommonMethods.conjunction(key, updateLineItemQuery);
                             updateLineItemQuery.append("item_quantity = "+jsonObject.getInt("item_quantity"));
 
                             if(invoice_status.equals("SENT"))
@@ -480,7 +478,7 @@ public class InvoiceMethods
 
                 for(long removedLineItemId : existingLineItems.keySet())
                 {
-                    key = commonMethods.conjunction(key, deleteLineItems);
+                    key = CommonMethods.conjunction(key, deleteLineItems);
                     deleteLineItems.append(removedLineItemId);
 
                     JSONObject existingObject = existingLineItems.get(removedLineItemId);
@@ -513,9 +511,9 @@ public class InvoiceMethods
 
             if(addLineItemList.size() > 0)
             {
-                Item_json[] insertingLineItems = invoiceMethods.fetchLineItemsDetails(addLineItemList.toArray(new Item_json[addLineItemList.size()]));
-                invoiceMethods.storeLineItems(insertingLineItems, invoice_id);
-                sub_total += invoiceMethods.findSubTotal(insertingLineItems);
+                Item_json[] insertingLineItems = InvoiceMethods.fetchLineItemsDetails(addLineItemList.toArray(new Item_json[addLineItemList.size()]));
+                InvoiceMethods.storeLineItems(insertingLineItems, invoice_id);
+                sub_total += InvoiceMethods.findSubTotal(insertingLineItems);
 
                 if(invoice_status.equals("SENT"))
                 {
@@ -572,12 +570,11 @@ public class InvoiceMethods
         return sub_total;
     }
 
-    public int updateInvoice(JSONObject inputJson, String invoice_status)
+    public static int updateInvoice(JSONObject inputJson, String invoice_status)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
+
+
+        Connection connection = CommonMethods.createConnection();
 
         boolean isTotalChanged = false;
         float old_total_cost = 0;
@@ -590,31 +587,31 @@ public class InvoiceMethods
 
             if(inputJson.has("customer_id"))
             {
-                if(!filters.ifCustomerExists(inputJson.getLong("customer_id")))
+                if(!Filters.ifCustomerExists(inputJson.getLong("customer_id")))
                 {
                     return 0;
                 }
 
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("customer_id = " + inputJson.getLong("customer_id"));
             }
             if(inputJson.has("salesperson_id"))
             {
-                if(!filters.ifSalespersonExists(inputJson.getLong("salesperson_id")))
+                if(!Filters.ifSalespersonExists(inputJson.getLong("salesperson_id")))
                 {
                     return 0;
                 }
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("salesperson_id = " + inputJson.getLong("salesperson_id"));
             }
 
             if(inputJson.has("subject"))
             {
-                if(!filters.checkSubject(inputJson.getString("subject")))
+                if(!Filters.checkSubject(inputJson.getString("subject")))
                 {
                     return 0;
                 }
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("subject = '"+inputJson.getString("subject") + "' ");
             }
             if(inputJson.has("invoice_date")) {
@@ -622,30 +619,30 @@ public class InvoiceMethods
                 {
                     return 0;
                 }
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("invoice_date = '"+inputJson.getString("invoice_date") + "' ");
             }
             if(inputJson.has("terms_and_conditions"))
             {
-                if(!filters.checkTermsAndConditions(inputJson.getString("terms_and_conditions")))
+                if(!Filters.checkTermsAndConditions(inputJson.getString("terms_and_conditions")))
                 {
                     return 0;
                 }
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("terms_and_conditions = '"+inputJson.getString("terms_and_conditions") + "' ");
             }
             if(inputJson.has("customer_notes"))
             {
-                if(!filters.checkCustomerNotes(inputJson.getString("customer_notes")))
+                if(!Filters.checkCustomerNotes(inputJson.getString("customer_notes")))
                 {
                     return 0;
                 }
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("customer_notes = '"+inputJson.getString("customer_notes") + "' ");
             }
             if(inputJson.has("line_items"))
             {
-                float newSubTotal = invoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
+                float newSubTotal = InvoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
 
                 if(newSubTotal == 0)
                 {
@@ -657,30 +654,30 @@ public class InvoiceMethods
             }
             if(inputJson.has("sub_total"))
             {
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("sub_total = " + inputJson.getFloat("sub_total"));
             }
             if(inputJson.has("tax"))
             {
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("tax = " + inputJson.getFloat("tax"));
                 isTotalChanged = true;
             }
             if(inputJson.has("discount"))
             {
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("discount = " + inputJson.getFloat("discount"));
                 isTotalChanged = true;
             }
             if(inputJson.has("charges"))
             {
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("charges = " + inputJson.getFloat("charges"));
                 isTotalChanged = true;
             }
             if(isTotalChanged)
             {
-                key = commonMethods.conjunction(key, invoiceUpdateQuery);
+                key = CommonMethods.conjunction(key, invoiceUpdateQuery);
                 invoiceUpdateQuery.append("total_cost = sub_total + tax - discount + charges ");
 
                 if(invoice_status.equals("SENT"))
@@ -737,8 +734,8 @@ public class InvoiceMethods
 
     public static void updateSalesAccount(float old_total, float new_total)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -758,11 +755,11 @@ public class InvoiceMethods
         }
     }
 
-    public String getInvoiceDetails(long invoice_id)
+    public static String getInvoiceDetails(long invoice_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
 
-        Connection connection =  commonMethods.createConnection();
+
+        Connection connection =  CommonMethods.createConnection();
 
         JsonObject responseJson = new JsonObject();
         JsonArray jsonArray = new JsonArray();
@@ -861,13 +858,12 @@ public class InvoiceMethods
 
     public static void markAsDraft(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if(!filters.ifInvoiceExists(invoice_id))
+        long invoice_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifInvoiceExists(invoice_id))
         {
             response.getWriter().println("Invoice does not exists");
             return;
@@ -907,9 +903,9 @@ public class InvoiceMethods
 
     public static int deleteSentInvoice(long invoice_id) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
+
+        Connection connection = CommonMethods.createConnection();
+
 
         float sales = 0;
 
@@ -925,7 +921,7 @@ public class InvoiceMethods
 
             InvoiceMethods.revertItemsSent(invoice_id, sales);
 
-            return invoiceMethods.deleteInvoice(invoice_id);
+            return InvoiceMethods.deleteInvoice(invoice_id);
 
 
         }
@@ -938,8 +934,8 @@ public class InvoiceMethods
 
     public static void revertItemsSent(long invoice_id, float sales) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
         float cost_of_goods_sold = 0;
 
         try
@@ -974,7 +970,7 @@ public class InvoiceMethods
             for(long item_id : itemQuantityInInvoice.keySet())
             {
                 itemQuery.append(" WHEN " + item_id + " THEN item_quantity + " + itemQuantityInInvoice.get(item_id));
-                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+                reducedIdKey = CommonMethods.conjunction(reducedIdKey, reducedItemIds);
 
                 reducedItemIds.append(item_id);
             }
@@ -1015,13 +1011,12 @@ public class InvoiceMethods
     }
     public static void markAsVoid(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if(!filters.ifInvoiceExists(invoice_id))
+        long invoice_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifInvoiceExists(invoice_id))
         {
             response.getWriter().println("Invoice does not exists");
             return;
@@ -1079,13 +1074,12 @@ public class InvoiceMethods
 
     public static void markAsSent(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if(!filters.ifInvoiceExists(invoice_id))
+        long invoice_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifInvoiceExists(invoice_id))
         {
             response.getWriter().println("Invoice does not exists");
             return;
@@ -1140,7 +1134,7 @@ public class InvoiceMethods
             for(long item_id : itemQuantityInInvoice.keySet())
             {
                 itemQuery.append(" WHEN " + item_id + " THEN item_quantity - " + itemQuantityInInvoice.get(item_id));
-                reducedIdKey = commonMethods.conjunction(reducedIdKey, reducedItemIds);
+                reducedIdKey = CommonMethods.conjunction(reducedIdKey, reducedItemIds);
 
                 reducedItemIds.append(item_id);
             }
@@ -1214,13 +1208,12 @@ public class InvoiceMethods
 
     public static void deleteInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if (!filters.ifInvoiceExists(invoice_id)) {
+        long invoice_id = CommonMethods.parseId(request);
+
+        if (!Filters.ifInvoiceExists(invoice_id)) {
             response.getWriter().println("Invoice does not exists");
             return;
         }
@@ -1277,13 +1270,12 @@ public class InvoiceMethods
 
     public static void cancelInvoiceWriteOff(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if (!filters.ifInvoiceExists(invoice_id)) {
+        long invoice_id = CommonMethods.parseId(request);
+
+        if (!Filters.ifInvoiceExists(invoice_id)) {
             response.getWriter().println("Invoice does not exists");
             return;
         }
@@ -1339,13 +1331,12 @@ public class InvoiceMethods
 
     public static void writeOffInvoice(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if (!filters.ifInvoiceExists(invoice_id)) {
+        long invoice_id = CommonMethods.parseId(request);
+
+        if (!Filters.ifInvoiceExists(invoice_id)) {
             response.getWriter().println("Invoice does not exists");
             return;
         }
@@ -1407,8 +1398,8 @@ public class InvoiceMethods
 
     public static String getInvoiceStatus(long invoice_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
+
+        Connection connection = CommonMethods.createConnection();
 
         try {
             PreparedStatement statement = connection.prepareStatement("SELECT status from invoices where invoice_id  = ?;");
@@ -1430,13 +1421,12 @@ public class InvoiceMethods
 
     public static void recordInvoicePayment(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if (!filters.ifInvoiceExists(invoice_id)) {
+        long invoice_id = CommonMethods.parseId(request);
+
+        if (!Filters.ifInvoiceExists(invoice_id)) {
             response.getWriter().println("Invoice does not exists");
             return;
         }
@@ -1462,7 +1452,7 @@ public class InvoiceMethods
                 balance_due = set.getFloat("total_cost") - set.getFloat("payment_made") - set.getFloat("written_off_amount");
             }
 
-            JSONObject bodyJson = commonMethods.getBodyJson(request);
+            JSONObject bodyJson = CommonMethods.getBodyJson(request);
 
             if(bodyJson.getFloat("amount_received") <= 0)
             {
@@ -1518,13 +1508,12 @@ public class InvoiceMethods
 
     public static void emailInvoice(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection = commonMethods.createConnection();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
+        Connection connection = CommonMethods.createConnection();
 
-        if (!filters.ifInvoiceExists(invoice_id)) {
+        long invoice_id = CommonMethods.parseId(request);
+
+        if (!Filters.ifInvoiceExists(invoice_id)) {
             response.getWriter().println("Invoice does not exists");
             return;
         }

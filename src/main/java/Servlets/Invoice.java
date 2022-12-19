@@ -44,28 +44,27 @@ public class Invoice extends HttpServlet
         }
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
 
         Invoice_json invoice_json = gson.fromJson(reader, Invoice_json.class);
         Item_json[] line_item_json = gson.fromJson(invoice_json.line_items, Item_json[].class);
 
-        if(line_item_json == null || (line_item_json = invoiceMethods.fetchLineItemsDetails(line_item_json)) == null)
+        if(line_item_json == null || (line_item_json = InvoiceMethods.fetchLineItemsDetails(line_item_json)) == null)
         {
             response.getWriter().println("No valid items !\nInvoice cannot be raised");
             return;
         }
 
-        invoice_json.sub_total = invoiceMethods.findSubTotal(line_item_json);
+        invoice_json.sub_total = InvoiceMethods.findSubTotal(line_item_json);
 
-        invoice_json.invoice_id = invoiceMethods.raiseInvoice(invoice_json);
+        invoice_json.invoice_id = InvoiceMethods.raiseInvoice(invoice_json);
 
         if(invoice_json.invoice_id == -1 )
         {
             response.getWriter().println("Something went wrong ! \nInvoice cannot be raised");
         }
-        else if (!invoiceMethods.storeLineItems(line_item_json, invoice_json.invoice_id))
+        else if (!InvoiceMethods.storeLineItems(line_item_json, invoice_json.invoice_id))
         {
-            invoiceMethods.deleteInvoice(invoice_json.invoice_id);
+            InvoiceMethods.deleteInvoice(invoice_json.invoice_id);
             response.getWriter().println("Something went wrong ! \nInvoice cannot be raised");
         }
         else
@@ -90,20 +89,19 @@ public class Invoice extends HttpServlet
             return;
         }
 
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        CommonMethods commonMethods = new CommonMethods();
+
 
         String responseJson;
 
         if (CommonMethods.emptyPath(request.getPathInfo()))
         {
-            responseJson = invoiceMethods.getInvoicesDetails();
+            responseJson = InvoiceMethods.getInvoicesDetails();
         }
         else
         {
-            long invoice_id = commonMethods.parseId(request);
+            long invoice_id = CommonMethods.parseId(request);
 
-            responseJson = invoiceMethods.getInvoiceDetails(invoice_id);
+            responseJson = InvoiceMethods.getInvoiceDetails(invoice_id);
 
             if(responseJson == null)
             {
@@ -125,11 +123,9 @@ public class Invoice extends HttpServlet
             response.getWriter().println("Invalid URL passed");
             return;
         }
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        CommonMethods commonMethods = new CommonMethods();
-        Filters filters = new Filters();
 
-        JSONObject inputJson = invoiceMethods.readBodyJson(request);
+
+        JSONObject inputJson = InvoiceMethods.readBodyJson(request);
 
         if(inputJson == null)
         {
@@ -137,9 +133,9 @@ public class Invoice extends HttpServlet
             return;
         }
 
-        inputJson.put("invoice_id", commonMethods.parseId(request));
+        inputJson.put("invoice_id", CommonMethods.parseId(request));
 
-        if(!filters.ifInvoiceExists(inputJson.getLong("invoice_id")))
+        if(!Filters.ifInvoiceExists(inputJson.getLong("invoice_id")))
         {
             response.getWriter().println("Invoice does not exists");
             return;
@@ -155,11 +151,11 @@ public class Invoice extends HttpServlet
         {
             response.getWriter().println("Invoice at Void status cannot be editted");
         }
-        else if(invoice_status.equals("SENT") && (invoiceMethods.updateInvoice(inputJson, "SENT") != 0))
+        else if(invoice_status.equals("SENT") && (InvoiceMethods.updateInvoice(inputJson, "SENT") != 0))
         {
             response.getWriter().println("Invoice updates successfully");
         }
-        else if( invoiceMethods.updateInvoice(inputJson, "DRAFT") != 0)
+        else if( InvoiceMethods.updateInvoice(inputJson, "DRAFT") != 0)
         {
             response.getWriter().println("Invoice updated successfully");
         }
@@ -178,13 +174,11 @@ public class Invoice extends HttpServlet
             return;
         }
 
-        InvoiceMethods invoiceMethods = new InvoiceMethods();
-        CommonMethods commonMethods = new CommonMethods();
-        Filters filters = new Filters();
 
-        long invoice_id = commonMethods.parseId(request);
 
-        if(!filters.ifInvoiceExists(invoice_id))
+        long invoice_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifInvoiceExists(invoice_id))
         {
             response.getWriter().println("Invoice does not exists");
             return;
@@ -201,7 +195,7 @@ public class Invoice extends HttpServlet
             response.getWriter().println("Invoice deleted successfully");
         }
 
-        else if(invoiceMethods.deleteInvoice(invoice_id) != 0)
+        else if(InvoiceMethods.deleteInvoice(invoice_id) != 0)
         {
             response.getWriter().println("Invoice deleted successfully !");
         }

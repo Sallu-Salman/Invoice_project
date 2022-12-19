@@ -8,12 +8,11 @@ import java.sql.*;
 
 public class ContactMethods
 {
-    public Contact_json getContactDetails(long contact_id)
+    public static Contact_json getContactDetails(long contact_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
         Contact_json contact_json = new Contact_json();
 
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -43,11 +42,10 @@ public class ContactMethods
 
     }
 
-    public Contact_json[] getContactsDetails()
+    public static Contact_json[] getContactsDetails()
     {
-        CommonMethods commonMethods = new CommonMethods();
 
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
         int rows = 1;
 
         try
@@ -82,10 +80,9 @@ public class ContactMethods
         }
     }
 
-    public long createNewContact(Contact_json contact_json)
+    public static long createNewContact(Contact_json contact_json)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -115,10 +112,9 @@ public class ContactMethods
 
     }
 
-    public int deleteContact(long contact_id)
+    public static int deleteContact(long contact_id)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
 
         try
         {
@@ -136,10 +132,9 @@ public class ContactMethods
 
     }
 
-    public int updateContact(Contact_json contact_json)
+    public static int updateContact(Contact_json contact_json)
     {
-        CommonMethods commonMethods = new CommonMethods();
-        Connection connection =  commonMethods.createConnection();
+        Connection connection =  CommonMethods.createConnection();
 
 
         StringBuilder query = new StringBuilder("UPDATE contacts SET ");
@@ -147,21 +142,21 @@ public class ContactMethods
 
         if(contact_json.contact_name != null)
         {
-            key = commonMethods.conjunction(key, query);
+            key = CommonMethods.conjunction(key, query);
 
             query.append(" contact_name = '"+contact_json.contact_name + "' ");
         }
 
         if(contact_json.contact_email != null)
         {
-            key = commonMethods.conjunction(key, query);
+            key = CommonMethods.conjunction(key, query);
 
             query.append(" contact_email = '"+contact_json.contact_email + "' ");
         }
 
         if(contact_json.contact_phone != null)
         {
-            commonMethods.conjunction(key, query);
+            CommonMethods.conjunction(key, query);
 
             query.append(" contact_phone = '"+contact_json.contact_phone + "' ");
         }

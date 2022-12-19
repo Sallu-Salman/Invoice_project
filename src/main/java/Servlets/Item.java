@@ -32,7 +32,6 @@ public class Item extends HttpServlet
 
         BufferedReader reader = request.getReader();
         Gson gson = new Gson();
-        ItemMethods itemMethods = new ItemMethods();
 
         Item_json item_json = gson.fromJson(reader, Item_json.class);
 
@@ -42,7 +41,7 @@ public class Item extends HttpServlet
             return;
         }
 
-        long generatedItemId = itemMethods.createNewItem(item_json);
+        long generatedItemId = ItemMethods.createNewItem(item_json);
 
         if(generatedItemId == -1)
         {
@@ -70,22 +69,21 @@ public class Item extends HttpServlet
             return;
         }
 
-        ItemMethods itemMethods = new ItemMethods();
-        CommonMethods commonMethods = new CommonMethods();
+
 
 
         String responseJson;
 
         if (CommonMethods.emptyPath(request.getPathInfo()))
         {
-            Item_json[] item_jsons = itemMethods.getItemsDetails();
+            Item_json[] item_jsons = ItemMethods.getItemsDetails();
             responseJson = new Gson().toJson(item_jsons);
         }
         else
         {
-            long item_id = commonMethods.parseId(request);
+            long item_id = CommonMethods.parseId(request);
 
-            Item_json item_json = itemMethods.getItemDetails(item_id);
+            Item_json item_json = ItemMethods.getItemDetails(item_id);
 
             if(item_json.item_name == null)
             {
@@ -103,7 +101,7 @@ public class Item extends HttpServlet
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
-        Filters filters = new Filters();
+
 
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
@@ -111,18 +109,17 @@ public class Item extends HttpServlet
             return;
         }
 
-        ItemMethods itemMethods = new ItemMethods();
-        CommonMethods commonMethods = new CommonMethods();
 
-        long item_id = commonMethods.parseId(request);
 
-        if(!filters.ifItemExists(item_id))
+        long item_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifItemExists(item_id))
         {
             response.getWriter().println("Item does not exits");
             return;
         }
 
-        if(itemMethods.deleteItem(item_id) == 0)
+        if(ItemMethods.deleteItem(item_id) == 0)
         {
             response.getWriter().println("Something went wrong !\nItem was not deleted");
         }
@@ -142,23 +139,22 @@ public class Item extends HttpServlet
             return;
         }
 
-        ItemMethods itemMethods = new ItemMethods();
-        CommonMethods commonMethods = new CommonMethods();
-        Filters filters = new Filters();
 
-        JSONObject jsonObject = commonMethods.getBodyJson(request);
 
-        Item_json item_json = filters.checkAndLoadItem(jsonObject);
 
-        item_json.item_id = commonMethods.parseId(request);
+        JSONObject jsonObject = CommonMethods.getBodyJson(request);
 
-        if(!filters.ifItemExists(item_json.item_id))
+        Item_json item_json = Filters.checkAndLoadItem(jsonObject);
+
+        item_json.item_id = CommonMethods.parseId(request);
+
+        if(!Filters.ifItemExists(item_json.item_id))
         {
             response.getWriter().println("Item does not exists");
             return;
         }
 
-        if(itemMethods.updateItem(item_json) == 0)
+        if(ItemMethods.updateItem(item_json) == 0)
         {
             response.getWriter().println("Something went wrong !\nItem was not updated");
         }
@@ -169,7 +165,7 @@ public class Item extends HttpServlet
             String responseJson = new Gson().toJson(item_json);
             response.setContentType("application/json");
             response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(commonMethods.refineJson(responseJson));
+            response.getWriter().write(CommonMethods.refineJson(responseJson));
         }
     }
 

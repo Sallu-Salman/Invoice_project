@@ -17,7 +17,7 @@ import java.util.HashMap;
 
 public class CommonMethods
 {
-    public Connection createConnection()
+    public static Connection createConnection()
     {
         try
         {
@@ -35,7 +35,7 @@ public class CommonMethods
         }
     }
 
-    public boolean conjunction(boolean key, StringBuilder query)
+    public static boolean conjunction(boolean key, StringBuilder query)
     {
         if(key)
         {
@@ -56,7 +56,7 @@ public class CommonMethods
 
     public static boolean paramPath(String path)
     {
-        return path.matches("/\\d+/?");
+        return (path != null && path.matches("/\\d+/?"));
     }
 
     public static boolean invoiceFunctionPath(String path)
@@ -68,7 +68,7 @@ public class CommonMethods
     {
         return path.matches("/\\d+/status/[a-z]+/?");
     }
-    public long parseId(HttpServletRequest request)
+    public static long parseId(HttpServletRequest request)
     {
         String pathInfo = request.getPathInfo();
 
@@ -80,7 +80,7 @@ public class CommonMethods
         return id;
     }
 
-    public JSONObject getBodyJson(HttpServletRequest request) throws IOException
+    public static JSONObject getBodyJson(HttpServletRequest request) throws IOException
     {
 
         BufferedReader reader = request.getReader();
@@ -95,7 +95,7 @@ public class CommonMethods
         return new JSONObject(jb.toString());
     }
 
-    public String refineJson(String jsonString)
+    public static String refineJson(String jsonString)
     {
         JSONObject jsonObject = new JSONObject(jsonString);
 
