@@ -3,6 +3,7 @@ package Methods;
 import models.SendEnhancedRequestBody;
 import models.SendEnhancedResponseBody;
 import models.SendRequestMessage;
+import org.json.JSONException;
 import org.json.JSONObject;
 import services.Courier;
 import services.SendService;
@@ -49,6 +50,34 @@ public class CommonMethods
         return key;
     }
 
+    public static JSONObject readBodyJson(HttpServletRequest request)
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+        BufferedReader reader;
+
+        try
+        {
+            String line;
+            reader =  request.getReader();
+            while ((line = reader.readLine()) != null)
+            {
+                stringBuilder.append(line).append('\n');
+            }
+
+            reader.close();
+
+            return new JSONObject(stringBuilder.toString());
+        }
+        catch (IOException e)
+        {
+            return null;
+        }
+        catch (JSONException e)
+        {
+            return null;
+        }
+
+    }
     public static boolean emptyPath(String path)
     {
         return (path == null || path.equals("/"));

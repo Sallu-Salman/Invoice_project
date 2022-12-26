@@ -125,7 +125,7 @@ public class Invoice extends HttpServlet
         }
 
 
-        JSONObject inputJson = InvoiceMethods.readBodyJson(request);
+        JSONObject inputJson = CommonMethods.readBodyJson(request);
 
         if(inputJson == null)
         {

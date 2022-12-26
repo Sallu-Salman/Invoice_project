@@ -310,35 +310,6 @@ public class InvoiceMethods
         }
     }
 
-    public static JSONObject readBodyJson(HttpServletRequest request)
-    {
-        StringBuilder stringBuilder = new StringBuilder();
-        BufferedReader reader;
-
-        try
-        {
-            String line;
-            reader =  request.getReader();
-            while ((line = reader.readLine()) != null)
-            {
-                stringBuilder.append(line).append('\n');
-            }
-
-            reader.close();
-
-            return new JSONObject(stringBuilder.toString());
-        }
-        catch (IOException e)
-        {
-            return null;
-        }
-        catch (JSONException e)
-        {
-            return null;
-        }
-
-    }
-
     public static void updateSentInvoiceItems(HashMap<Long,Integer> item_id_hash)
     {
 

@@ -29,7 +29,7 @@ public class ItemMethods
             statement.setFloat(1, (item_json.stock_rate* item_json.item_quantity));
             statement.executeUpdate();
 
-            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Owners Equity';");
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit + ? WHERE account_name = 'Petty cash';");
             statement.setFloat(1, (item_json.stock_rate* item_json.item_quantity));
             statement.executeUpdate();
 
@@ -152,12 +152,12 @@ public class ItemMethods
 
             int affectedRows = statement.executeUpdate();
 
-            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - "+old_total_value+" WHERE account_name = 'Owners Equity';");
-
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? WHERE account_name = 'Petty cash';");
+            statement.setFloat(1, old_total_value);
             statement.executeUpdate();
 
-            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - "+old_total_value+"  WHERE account_name = 'Inventory asset';");
-
+            statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? WHERE account_name = 'Inventory asset';");
+            statement.setFloat(1, old_total_value);
             statement.executeUpdate();
 
             connection.close();
@@ -254,11 +254,15 @@ public class ItemMethods
 
             if(isQuantityChanged || isStockRateChanged)
             {
-                statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - "+old_total_value+" + "+new_total_value+" WHERE account_name = 'Owners Equity';");
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET credit = credit - ? + ? WHERE account_name = 'Petty cash';");
+                statement.setFloat(1, old_total_value);
+                statement.setFloat(2, new_total_value);
 
                 statement.executeUpdate();
 
-                statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - "+old_total_value+" + "+new_total_value+" WHERE account_name = 'Inventory asset';");
+                statement = connection.prepareStatement("UPDATE chart_of_accounts SET debit = debit - ? + ? WHERE account_name = 'Inventory asset';");
+                statement.setFloat(1, old_total_value);
+                statement.setFloat(2, new_total_value);
 
                 statement.executeUpdate();
             }
