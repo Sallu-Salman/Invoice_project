@@ -1,5 +1,6 @@
 package Methods;
 
+import com.google.gson.JsonObject;
 import models.SendEnhancedRequestBody;
 import models.SendEnhancedResponseBody;
 import models.SendRequestMessage;
@@ -9,6 +10,7 @@ import services.Courier;
 import services.SendService;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.sql.Connection;
@@ -50,6 +52,12 @@ public class CommonMethods
         return key;
     }
 
+    public static void responseSender(HttpServletResponse response, int errorConstant) throws IOException
+    {
+        JsonObject jsonObject = new JsonObject();
+
+        //get error constant message then printwrite then set status code
+    }
     public static JSONObject readBodyJson(HttpServletRequest request)
     {
         StringBuilder stringBuilder = new StringBuilder();
