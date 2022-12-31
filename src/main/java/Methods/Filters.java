@@ -21,7 +21,7 @@ public class Filters {
     }
 
     public static boolean checkEmail(String email) {
-        String regex = "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$";
+        String regex = "^[\\w-\\.\\+]+@([\\w-]+\\.)+[\\w-]{2,4}$";
 
         Pattern p = Pattern.compile(regex);
 

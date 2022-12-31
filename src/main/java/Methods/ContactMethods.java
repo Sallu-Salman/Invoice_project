@@ -95,14 +95,15 @@ public class ContactMethods
             statement.executeUpdate();
 
             ResultSet set = statement.getGeneratedKeys();
-            connection.close();
+            long generatedId = -1;
 
             if(set.next())
             {
-                return set.getLong(1);
+                generatedId = set.getLong(1);
             }
 
-            return -1;
+            connection.close();
+            return generatedId;
 
         }
         catch (SQLException e)

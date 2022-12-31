@@ -1003,7 +1003,6 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             ResultSet set = statement.executeQuery();
             float sales = 0;
-            float cost_of_goods_sold = 0;
 
             while (set.next()) {
 
@@ -1537,15 +1536,18 @@ public class InvoiceMethods
                     CommonMethods.responseSender(response, "Invoice in void status. Could not be sent");
                     return;
                 }
+
+                CommonMethods.sendEmail(invoice_id, set.getString("customer_name"),set.getString("customer_email"), set.getInt("total_cost"), set.getString("invoice_date"));
+
                 if (set.getString("status").equals("DRAFT"))
                 {
                     InvoiceMethods.markAsSent(request, response);
                 }
-
-                CommonMethods.sendEmail(invoice_id, set.getString("customer_name"),set.getString("customer_email"), set.getInt("total_cost"), set.getString("invoice_date"));
+                else
+                {
+                    CommonMethods.responseSender(response, "Email sent successfully");
+                }
             }
-
-            CommonMethods.responseSender(response, "Email sent successfully");
 
 
         } catch (SQLException e)
