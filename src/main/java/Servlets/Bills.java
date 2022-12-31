@@ -22,7 +22,8 @@ public class Bills extends HttpServlet
     {
         if(!CommonMethods.emptyPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -36,12 +37,14 @@ public class Bills extends HttpServlet
             StringBuilder query = new StringBuilder("UPDATE items SET ");
 
             if (inputJson == null) {
-                response.getWriter().println("Invalid data provided");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data Passed");
                 return;
             }
             if(!Filters.ifItemExists(inputJson.getLong("item_id")))
             {
-                response.getWriter().println("Item does not exists");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Item does not exists");
                 return;
             }
 
@@ -79,16 +82,18 @@ public class Bills extends HttpServlet
             statement.setFloat(1, inputJson.getInt("item_quantity")*stock_rate);
             statement.executeUpdate();
 
-            response.getWriter().println("Bill created successfully");
+            CommonMethods.responseSender(response, "Bill created successfully");
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong");
         }
         catch (JSONException e)
         {
-            response.getWriter().println("Something went wrong");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong");
         }
     }
 }

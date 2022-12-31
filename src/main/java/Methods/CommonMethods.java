@@ -1,6 +1,9 @@
 package Methods;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import models.SendEnhancedRequestBody;
 import models.SendEnhancedResponseBody;
 import models.SendRequestMessage;
@@ -52,11 +55,36 @@ public class CommonMethods
         return key;
     }
 
-    public static void responseSender(HttpServletResponse response, int errorConstant) throws IOException
+    public static void responseSender(HttpServletResponse response, String message) throws IOException
     {
         JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("message", message);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
 
-        //get error constant message then printwrite then set status code
+        response.getWriter().println(jsonObject);
+    }
+
+    public static void responseArraySender(HttpServletResponse response, String message, String content) throws IOException
+    {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("message", message);
+        jsonObject.add("content", new Gson().fromJson(content, JsonArray.class));
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().println(jsonObject);
+    }
+
+    public static void responseObjectSender(HttpServletResponse response, String message, String content) throws IOException
+    {
+        JsonObject jsonObject = new JsonObject();
+        jsonObject.addProperty("message", message);
+        jsonObject.add("content", new Gson().fromJson(content, JsonObject.class));
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().println(jsonObject);
     }
     public static JSONObject readBodyJson(HttpServletRequest request)
     {

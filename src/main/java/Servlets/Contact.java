@@ -29,7 +29,8 @@ public class Contact extends HttpServlet {
     {
         if(!CommonMethods.emptyPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -40,7 +41,8 @@ public class Contact extends HttpServlet {
         Contact_json contact_json = gson.fromJson(reader, Contact_json.class);
         if(!Filters.checkContact(contact_json))
         {
-            response.getWriter().println("Invalid data passed !");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid data Passed");
             return;
         }
 
@@ -48,19 +50,13 @@ public class Contact extends HttpServlet {
 
         if(generatedContactId == -1)
         {
-            response.getWriter().println("Something went wrong !\nContact was not created.");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Contact was not created");
         }
-
         else
         {
-            response.getWriter().println("Contact created successfully !");
-
             contact_json.contact_id = generatedContactId;
-
-            String responseJson = new Gson().toJson(contact_json);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(responseJson);
+            CommonMethods.responseObjectSender(response, "Contact has been created", new Gson().toJson(contact_json));
         }
 
     }
@@ -69,12 +65,10 @@ public class Contact extends HttpServlet {
     {
         if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
-
-
-
 
         String responseJson;
 
@@ -82,6 +76,7 @@ public class Contact extends HttpServlet {
         {
             Contact_json[] contact_jsons = ContactMethods.getContactsDetails();
             responseJson = new Gson().toJson(contact_jsons);
+            CommonMethods.responseArraySender(response, "success", responseJson);
         }
         else
         {
@@ -90,16 +85,14 @@ public class Contact extends HttpServlet {
 
             if(contact_json.contact_name == null)
             {
-                response.getWriter().println("Invalid data passed !");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data Passed");
                 return;
             }
 
             responseJson = new Gson().toJson(contact_json);
+            CommonMethods.responseObjectSender(response, "success", responseJson);
         }
-
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(responseJson);
 
     }
 
@@ -107,7 +100,8 @@ public class Contact extends HttpServlet {
     {
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -118,11 +112,12 @@ public class Contact extends HttpServlet {
 
         if(ContactMethods.deleteContact(contact_id) == 0)
         {
-            response.getWriter().println("Something went wrong !\nContact was not deleted");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Contact was not deleted");
         }
         else
         {
-            response.getWriter().println("Contact deleted successfully !");
+            CommonMethods.responseSender(response, "Contact has been deleted");
         }
 
     }
@@ -131,7 +126,8 @@ public class Contact extends HttpServlet {
     {
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -144,23 +140,20 @@ public class Contact extends HttpServlet {
 
         if(!Filters.checkContact(contact_json))
         {
-            response.getWriter().println("Invalid data passed !");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid data Passed");
             return;
         }
         contact_json.contact_id = CommonMethods.parseId(request);
 
         if(ContactMethods.updateContact(contact_json) == 0)
         {
-            response.getWriter().println("Something went wrong !\nContact was not updated");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Something went wrong. Contact was not updated");
         }
         else
         {
-            response.getWriter().println("Contact updated successfully !");
-
-            String responseJson = new Gson().toJson(contact_json);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(responseJson);
+            CommonMethods.responseObjectSender(response, "Contact has been updated", new Gson().toJson(contact_json));
         }
     }
 }

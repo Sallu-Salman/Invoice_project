@@ -20,7 +20,8 @@ public class BankTransactions extends HttpServlet
     {
         if(!CommonMethods.emptyPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -33,7 +34,8 @@ public class BankTransactions extends HttpServlet
 
             if(inputJson == null)
             {
-                response.getWriter().println("Invalid data provided");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data Passed");
                 return;
             }
 
@@ -52,7 +54,8 @@ public class BankTransactions extends HttpServlet
             }
             else
             {
-                response.getWriter().println("Invalid data provided");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data Passed");
                 return;
             }
 
@@ -64,15 +67,17 @@ public class BankTransactions extends HttpServlet
             statement.setFloat(1, inputJson.getFloat("amount"));
             statement.executeUpdate();
 
-            response.getWriter().println("The bank transaction has been recorded");
+            CommonMethods.responseSender(response, "The bank transaction has been recorded");
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong");
         }
         catch (JSONException e)
         {
-            response.getWriter().println("Something went wrong");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong");
         }
 
     }

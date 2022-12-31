@@ -836,7 +836,8 @@ public class InvoiceMethods
 
         if(!Filters.ifInvoiceExists(invoice_id))
         {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -848,11 +849,13 @@ public class InvoiceMethods
             while (set.next()) {
 
                 if (set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID") || set.getString("status").equals("SENT")) {
-                    response.getWriter().println("Open invoices cannot be changed to Draft");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Open invoices cannot be changed to Draft");
                     return;
                 }
                 if (set.getString("status").equals("DRAFT")) {
-                    response.getWriter().println("Invoice already in Draft state");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Invoice already in Draft state");
                     return;
                 }
                 if (set.getString("status").equals("VOID")) {
@@ -860,7 +863,7 @@ public class InvoiceMethods
                     statement.setLong(1, invoice_id);
                     statement.executeUpdate();
 
-                    response.getWriter().println("Invoice marked as Draft");
+                    CommonMethods.responseSender(response, "Invoice marked as Draft");
                     return;
                 }
 
@@ -868,7 +871,8 @@ public class InvoiceMethods
         }
         catch(SQLException e)
         {
-            response.getWriter().println("Something went wrong. Cannot mark invoice as Draft");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Cannot mark invoice as Draft");
         }
     }
 
@@ -989,7 +993,8 @@ public class InvoiceMethods
 
         if(!Filters.ifInvoiceExists(invoice_id))
         {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1004,12 +1009,14 @@ public class InvoiceMethods
 
                 if(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID"))
                 {
-                    response.getWriter().println("You cannot mark a paid invoice as Void");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "You cannot mark a paid invoice as void");
                     return;
                 }
                 if(set.getString("status").equals("VOID"))
                 {
-                    response.getWriter().println("Invoice already in Void state");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Invoice already in void status");
                     return;
                 }
                 if(set.getString("status").equals("DRAFT"))
@@ -1018,7 +1025,7 @@ public class InvoiceMethods
                     statement.setLong(1, invoice_id);
                     statement.executeUpdate();
 
-                    response.getWriter().println("Invoice marked as Void");
+                    CommonMethods.responseSender(response, "Invoice marked as Void");
                     return;
                 }
 
@@ -1033,13 +1040,14 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             statement.executeUpdate();
 
-            response.getWriter().println("Invoice marked as 'VOID'");
+            CommonMethods.responseSender(response, "Invoice marked as Void");
 
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Could not mark Invoice as void");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Could not mark invoice as void");
         }
     }
 
@@ -1052,7 +1060,8 @@ public class InvoiceMethods
 
         if(!Filters.ifInvoiceExists(invoice_id))
         {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1069,7 +1078,8 @@ public class InvoiceMethods
             {
                 if(!set.getString("status").equals("DRAFT"))
                 {
-                    response.getWriter().println("Only Invoice in Draft state can be marked as Sent");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Only invoice in draft state can be marked as Sent");
                     return;
                 }
                 sales = set.getFloat("total_cost");
@@ -1167,12 +1177,13 @@ public class InvoiceMethods
             statement.setLong(1, invoice_id);
             statement.executeUpdate();
 
-            response.getWriter().println("Invoice marked as 'SENT'");
+            CommonMethods.responseSender(response, "Invoice marked as Sent");
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong ! Could not mark as sent");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice could not be marked as sent");
         }
 
     }
@@ -1185,7 +1196,8 @@ public class InvoiceMethods
         long invoice_id = CommonMethods.parseId(request);
 
         if (!Filters.ifInvoiceExists(invoice_id)) {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1203,7 +1215,8 @@ public class InvoiceMethods
 
                 if(!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || payment_made == 0)
                 {
-                    response.getWriter().println("No payments available");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "No payments available");
                     return;
                 }
 
@@ -1230,12 +1243,13 @@ public class InvoiceMethods
             statement.setFloat(1, payment_made);
             statement.executeUpdate();
 
-            response.getWriter().println("Invoice payment deleted successfully");
+            CommonMethods.responseSender(response, "Invoice payment has been deleted");
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Cannot delete Invoice payment");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Could not delete invoice payment");
         }
     }
 
@@ -1247,7 +1261,8 @@ public class InvoiceMethods
         long invoice_id = CommonMethods.parseId(request);
 
         if (!Filters.ifInvoiceExists(invoice_id)) {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1263,8 +1278,10 @@ public class InvoiceMethods
 
                 written_off_amount = set.getFloat("written_off_amount");
 
-                if (!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || written_off_amount == 0) {
-                    response.getWriter().println("No write offs available");
+                if (!(set.getString("status").equals("PAID") || set.getString("status").equals("PARTIALLY PAID")) || written_off_amount == 0)
+                {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "No write offs available");
                     return;
                 }
 
@@ -1290,11 +1307,12 @@ public class InvoiceMethods
             statement.setFloat(1, written_off_amount);
             statement.executeUpdate();
 
-            response.getWriter().println("The write off done for this Invoice has been cancelled");
+            CommonMethods.responseSender(response, "The write off done for this invoice has been cancelled");
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Cannot cancel write off");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Cannot cancel write off");
         }
 
     }
@@ -1307,8 +1325,10 @@ public class InvoiceMethods
 
         long invoice_id = CommonMethods.parseId(request);
 
-        if (!Filters.ifInvoiceExists(invoice_id)) {
-            response.getWriter().println("Invoice does not exists");
+        if (!Filters.ifInvoiceExists(invoice_id))
+        {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1320,12 +1340,16 @@ public class InvoiceMethods
             float balance_due = 0;
 
             while (set.next()) {
-                if (set.getString("status").equals("VOID")) {
-                    response.getWriter().println("This feature cannot be used for a void invoice");
+                if (set.getString("status").equals("VOID"))
+                {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "This feature cannot be used for a void invoice");
                     return;
                 }
-                if (set.getString("status").equals("DRAFT")) {
-                    response.getWriter().println("This feature cannot be used for a draft invoice");
+                if (set.getString("status").equals("DRAFT"))
+                {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "This feature cannot be used for a draft invoice");
                     return;
                 }
 
@@ -1334,7 +1358,8 @@ public class InvoiceMethods
 
             if(balance_due == 0)
             {
-                response.getWriter().println("This invoice cannot be written off");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "This invoice cannot be written off");
                 return;
             }
 
@@ -1356,12 +1381,13 @@ public class InvoiceMethods
             statement.setFloat(1, balance_due);
             statement.executeUpdate();
 
-            response.getWriter().println("Invoice has been written off successfully");
+            CommonMethods.responseSender(response, "Invoice has been written off successfully");
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Cannot write off Invoice");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Cannot write off invoice");
         }
 
 
@@ -1398,7 +1424,8 @@ public class InvoiceMethods
         long invoice_id = CommonMethods.parseId(request);
 
         if (!Filters.ifInvoiceExists(invoice_id)) {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1411,12 +1438,16 @@ public class InvoiceMethods
 
             while (set.next())
             {
-                if (set.getString("status").equals("VOID")) {
-                    response.getWriter().println("Invoice in Void status. Cannot record payment");
+                if (set.getString("status").equals("VOID"))
+                {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Invoice in void status. Cannot record payment");
                     return;
                 }
-                if (set.getString("status").equals("DRAFT")) {
-                    response.getWriter().println("Invoice in Draft status. Cannot record payment");
+                if (set.getString("status").equals("DRAFT"))
+                {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Invoice in Draft status. Cannot record payment");
                     return;
                 }
 
@@ -1427,11 +1458,13 @@ public class InvoiceMethods
 
             if(bodyJson.getFloat("amount_received") <= 0)
             {
-                response.getWriter().println("Incorrect value entered as amount");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Incorrect value entered as amount");
             }
             else if(balance_due == 0 || bodyJson.getFloat("amount_received") > balance_due)
             {
-                response.getWriter().println("Excess amount entered");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Excess amount entered");
             }
 
             else
@@ -1465,14 +1498,15 @@ public class InvoiceMethods
                 statement.setFloat(1, bodyJson.getFloat("amount_received"));
                 statement.executeUpdate();
 
-                response.getWriter().println("Payment recorded successfully");
+                CommonMethods.responseSender(response, "Payment recorded successfully");
             }
 
 
         }
         catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Could not record payment");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Could not record payment");
         }
 
     }
@@ -1485,7 +1519,8 @@ public class InvoiceMethods
         long invoice_id = CommonMethods.parseId(request);
 
         if (!Filters.ifInvoiceExists(invoice_id)) {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -1498,7 +1533,8 @@ public class InvoiceMethods
             {
                 if(set.getString("status").equals("VOID"))
                 {
-                    response.getWriter().println("Invoice in Void status. Cannot be sent");
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    CommonMethods.responseSender(response, "Invoice in void status. Could not be sent");
                     return;
                 }
                 if (set.getString("status").equals("DRAFT"))
@@ -1509,12 +1545,13 @@ public class InvoiceMethods
                 CommonMethods.sendEmail(invoice_id, set.getString("customer_name"),set.getString("customer_email"), set.getInt("total_cost"), set.getString("invoice_date"));
             }
 
-            response.getWriter().println("Email sent successfully");
+            CommonMethods.responseSender(response, "Email sent successfully");
 
 
         } catch (SQLException e)
         {
-            response.getWriter().println("Something went wrong. Invoice cannot be sent");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice cannot be sent");
         }
 
     }
@@ -1548,7 +1585,8 @@ public class InvoiceMethods
         }
         else
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL passed");
         }
     }
 
@@ -1573,7 +1611,8 @@ public class InvoiceMethods
         }
         else
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL passed");
         }
     }
 

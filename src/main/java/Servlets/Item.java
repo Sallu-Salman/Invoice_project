@@ -26,7 +26,8 @@ public class Item extends HttpServlet
     {
         if(!CommonMethods.emptyPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -37,7 +38,8 @@ public class Item extends HttpServlet
 
         if(item_json.item_cost <= 0 || item_json.item_quantity < 0 || item_json.stock_rate <= 0 )
         {
-            response.getWriter().println("Invalid data passed !");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid data Passed");
             return;
         }
 
@@ -45,19 +47,15 @@ public class Item extends HttpServlet
 
         if(generatedItemId == -1)
         {
-            response.getWriter().println("Something went wrong !\nItem was not created");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Item was not created");
         }
 
         else
         {
-            response.getWriter().println("Item created successfully");
-
             item_json.item_id = generatedItemId;
 
-            String responseJson = new Gson().toJson(item_json);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(responseJson);
+            CommonMethods.responseObjectSender(response, "Item has been created", new Gson().toJson(item_json));
         }
     }
 
@@ -65,12 +63,10 @@ public class Item extends HttpServlet
     {
         if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
-
-
-
 
         String responseJson;
 
@@ -78,6 +74,8 @@ public class Item extends HttpServlet
         {
             Item_json[] item_jsons = ItemMethods.getItemsDetails();
             responseJson = new Gson().toJson(item_jsons);
+
+            CommonMethods.responseArraySender(response, "success", responseJson);
         }
         else
         {
@@ -87,16 +85,16 @@ public class Item extends HttpServlet
 
             if(item_json.item_name == null)
             {
-                response.getWriter().println("Invalid data passed !");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data passed");
                 return;
             }
 
             responseJson = new Gson().toJson(item_json);
+
+            CommonMethods.responseObjectSender(response, "success", responseJson);
         }
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(responseJson);
     }
 
     public void doDelete(HttpServletRequest request, HttpServletResponse response) throws IOException
@@ -105,7 +103,8 @@ public class Item extends HttpServlet
 
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -115,17 +114,19 @@ public class Item extends HttpServlet
 
         if(!Filters.ifItemExists(item_id))
         {
-            response.getWriter().println("Item does not exits");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Item does not exists");
             return;
         }
 
         if(ItemMethods.deleteItem(item_id) == 0)
         {
-            response.getWriter().println("Something went wrong !\nItem was not deleted");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Item was not deleted");
         }
         else
         {
-            response.getWriter().println("Item deleted successfully !");
+            CommonMethods.responseSender(response, "Item has been deleted");
         }
 
     }
@@ -135,7 +136,8 @@ public class Item extends HttpServlet
 
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -150,22 +152,21 @@ public class Item extends HttpServlet
 
         if(!Filters.ifItemExists(item_json.item_id))
         {
-            response.getWriter().println("Item does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Item does not exists");
             return;
         }
 
         if(ItemMethods.updateItem(item_json) == 0)
         {
-            response.getWriter().println("Something went wrong !\nItem was not updated");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Item was not updated");
         }
         else
         {
-            response.getWriter().println("Item updated successfully !");
-
             String responseJson = new Gson().toJson(item_json);
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(CommonMethods.refineJson(responseJson));
+
+            CommonMethods.responseObjectSender(response, "Item has been updated", CommonMethods.refineJson(responseJson));
         }
     }
 

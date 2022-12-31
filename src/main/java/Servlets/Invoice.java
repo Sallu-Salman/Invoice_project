@@ -39,7 +39,8 @@ public class Invoice extends HttpServlet
 
         if(!CommonMethods.emptyPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
         BufferedReader reader = request.getReader();
@@ -50,7 +51,7 @@ public class Invoice extends HttpServlet
 
         if(line_item_json == null || (line_item_json = InvoiceMethods.fetchLineItemsDetails(line_item_json)) == null)
         {
-            response.getWriter().println("No valid items !\nInvoice cannot be raised");
+            CommonMethods.responseSender(response, "No valid items. Invoice cannot be raised");
             return;
         }
 
@@ -60,24 +61,22 @@ public class Invoice extends HttpServlet
 
         if(invoice_json.invoice_id == -1 )
         {
-            response.getWriter().println("Something went wrong ! \nInvoice cannot be raised");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice cannot be raised");
         }
         else if (!InvoiceMethods.storeLineItems(line_item_json, invoice_json.invoice_id))
         {
             InvoiceMethods.deleteInvoice(invoice_json.invoice_id);
-            response.getWriter().println("Something went wrong ! \nInvoice cannot be raised");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice cannot be raised");
         }
         else
         {
-            response.getWriter().println("The invoice has been created");
-
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("invoice_id", invoice_json.invoice_id);
             jsonObject.put("status", "DRAFT");
 
-            response.setContentType("application/json");
-            response.setCharacterEncoding("UTF-8");
-            response.getWriter().write(jsonObject.toString());
+            CommonMethods.responseObjectSender(response, "Invoice has been created", jsonObject.toString());
         }
     }
 
@@ -85,7 +84,8 @@ public class Invoice extends HttpServlet
     {
         if(!(CommonMethods.emptyPath(request.getPathInfo()) || CommonMethods.paramPath(request.getPathInfo())))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -96,6 +96,7 @@ public class Invoice extends HttpServlet
         if (CommonMethods.emptyPath(request.getPathInfo()))
         {
             responseJson = InvoiceMethods.getInvoicesDetails();
+            CommonMethods.responseArraySender(response, "success", responseJson);
         }
         else
         {
@@ -105,22 +106,22 @@ public class Invoice extends HttpServlet
 
             if(responseJson == null)
             {
-                response.getWriter().println("Invalid data passed !");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                CommonMethods.responseSender(response, "Invalid data Passed");
                 return;
             }
 
-        }
+            CommonMethods.responseObjectSender(response, "success", responseJson);
 
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(responseJson);
+        }
     }
 
     public void doPut(HttpServletRequest request, HttpServletResponse response) throws IOException
     {
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -129,7 +130,8 @@ public class Invoice extends HttpServlet
 
         if(inputJson == null)
         {
-            response.getWriter().println("Invalid data provided");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid data Passed");
             return;
         }
 
@@ -137,7 +139,8 @@ public class Invoice extends HttpServlet
 
         if(!Filters.ifInvoiceExists(inputJson.getLong("invoice_id")))
         {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -145,23 +148,26 @@ public class Invoice extends HttpServlet
 
         if(invoice_status.equals("PAID") || invoice_status.equals("PARTIALLY PAID"))
         {
-            response.getWriter().println("Payment already initiated. Cannot edit invoice now");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Payment already initiated. Cannot edit invoice now");
         }
         else if(invoice_status.equals("VOID"))
         {
-            response.getWriter().println("Invoice at Void status cannot be editted");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice in Void status cannot be edited");
         }
         else if(invoice_status.equals("SENT") && (InvoiceMethods.updateInvoice(inputJson, "SENT") != 0))
         {
-            response.getWriter().println("Invoice updates successfully");
+            CommonMethods.responseSender(response, "Invoice has been updated");
         }
         else if( InvoiceMethods.updateInvoice(inputJson, "DRAFT") != 0)
         {
-            response.getWriter().println("Invoice updated successfully");
+            CommonMethods.responseSender(response, "Invoice has been updated");
         }
         else
         {
-            response.getWriter().println("Something went wrong !\nInvoice was not updated");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice was not updated");
         }
 
     }
@@ -170,7 +176,8 @@ public class Invoice extends HttpServlet
     {
         if(!CommonMethods.paramPath(request.getPathInfo()))
         {
-            response.getWriter().println("Invalid URL passed");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invalid URL Passed");
             return;
         }
 
@@ -180,7 +187,8 @@ public class Invoice extends HttpServlet
 
         if(!Filters.ifInvoiceExists(invoice_id))
         {
-            response.getWriter().println("Invoice does not exists");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice does not exists");
             return;
         }
 
@@ -188,20 +196,23 @@ public class Invoice extends HttpServlet
 
         if(invoice_status.equals("PAID") || invoice_status.equals("PARTIALLY PAID"))
         {
-            response.getWriter().println("Invoice contains payments");
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            CommonMethods.responseSender(response, "Invoice containing payments cannot be deleted");
+
         }
         else if(invoice_status.equals("SENT") && InvoiceMethods.deleteSentInvoice(invoice_id) != 0)
         {
-            response.getWriter().println("Invoice deleted successfully");
+            CommonMethods.responseSender(response, "Invoice has been deleted");
         }
 
         else if(InvoiceMethods.deleteInvoice(invoice_id) != 0)
         {
-            response.getWriter().println("Invoice deleted successfully !");
+            CommonMethods.responseSender(response, "Invoice has been deleted");
         }
         else
         {
-            response.getWriter().println("Something went wrong !\nInvoice was not deleted");
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            CommonMethods.responseSender(response, "Something went wrong. Invoice was not deleted");
         }
     }
 }
