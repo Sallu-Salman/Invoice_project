@@ -928,7 +928,7 @@ public class InvoiceMethods
 
                 if(itemQuantityInInvoice.containsKey(set.getLong("item_id")))
                 {
-                    quantity += itemQuantityInInvoice.get("item_id");
+                    quantity += itemQuantityInInvoice.get(set.getLong("item_id"));
                     itemQuantityInInvoice.remove(set.getLong("item_id"));
                 }
 
@@ -1098,7 +1098,7 @@ public class InvoiceMethods
 
                 if(itemQuantityInInvoice.containsKey(set.getLong("item_id")))
                 {
-                    quantity += itemQuantityInInvoice.get("item_id");
+                    quantity += itemQuantityInInvoice.get(set.getLong("item_id"));
                     itemQuantityInInvoice.remove(set.getLong("item_id"));
                 }
 
