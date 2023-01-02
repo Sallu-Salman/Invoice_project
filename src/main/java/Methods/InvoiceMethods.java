@@ -357,23 +357,27 @@ public class InvoiceMethods
         }
     }
 
-    public static float updateLineItems(JSONArray newLineItems, long invoice_id, String invoice_status)
+    public static JSONObject updateLineItems(JSONObject inputJson, String invoice_status)
     {
 
         Connection connection = CommonMethods.createConnection();
 
+        JSONArray newLineItems = inputJson.getJSONArray("line_items");
+        long invoice_id = inputJson.getLong("invoice_id");
+
         Gson gson = new Gson();
         float sub_total = 0;
+        float tax = 0;
         float change_in_inventory_asset = 0;
 
         if(!Filters.ifItemsExists(newLineItems))
         {
-            return 0;
+            return null;
         }
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("SELECT line_item_id, item_id, item_cost, item_quantity, stock_rate FROM line_items WHERE invoice_id = ?;");
+            PreparedStatement statement = connection.prepareStatement("SELECT line_item_id, item_id, item_cost, item_quantity, stock_rate, item_gst FROM line_items WHERE invoice_id = ?;");
             statement.setLong(1, invoice_id);
             ResultSet rs = statement.executeQuery();
 
@@ -390,8 +394,11 @@ public class InvoiceMethods
                 jsonObject.put("item_quantity", rs.getInt("item_quantity"));
                 jsonObject.put("stock_rate", rs.getFloat("stock_rate"));
                 jsonObject.put("item_id", rs.getLong("item_id"));
+                jsonObject.put("item_gst", rs.getInt("item_gst"));
 
                 sub_total += (rs.getFloat("item_cost") * rs.getInt("item_quantity"));
+
+                tax += ((rs.getFloat("item_cost")* rs.getInt("item_quantity") * rs.getInt("item_gst"))/100);
 
                 existingLineItems.put(rs.getLong("line_item_id"), jsonObject);
             }
@@ -409,7 +416,7 @@ public class InvoiceMethods
                 {
                     JSONObject existingObject = existingLineItems.get(jsonObject.getLong("line_item_id"));
 
-                    if(jsonObject.getFloat("item_cost") != existingObject.getFloat("item_cost") || jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
+                    if(jsonObject.getFloat("item_cost") != existingObject.getFloat("item_cost") || jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity") || jsonObject.getInt("item_gst") != existingObject.getInt("item_gst"))
                     {
                         StringBuilder updateLineItemQuery = new StringBuilder("UPDATE line_items SET ");
                         boolean key = true;
@@ -418,6 +425,11 @@ public class InvoiceMethods
                         {
                             key = CommonMethods.conjunction(key, updateLineItemQuery);
                             updateLineItemQuery.append("item_cost = "+jsonObject.getFloat("item_cost"));
+                        }
+                        if(jsonObject.getInt("item_gst") != existingObject.getInt("item_gst"))
+                        {
+                            key = CommonMethods.conjunction(key, updateLineItemQuery);
+                            updateLineItemQuery.append("item_gst = "+jsonObject.getInt("item_gst"));
                         }
                         if(jsonObject.getInt("item_quantity") != existingObject.getInt("item_quantity"))
                         {
@@ -453,6 +465,9 @@ public class InvoiceMethods
                         sub_total -= (existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity"));
                         sub_total += (jsonObject.getFloat("item_cost") * jsonObject.getInt("item_quantity"));
 
+                        tax += ((jsonObject.getFloat("item_cost") * jsonObject.getInt("item_quantity") * jsonObject.getInt("item_gst")) / 100);
+                        tax -= ((existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity") * existingObject.getInt("item_gst"))/100);
+
                     }
 
                     existingLineItems.remove(jsonObject.getLong("line_item_id"));
@@ -472,6 +487,8 @@ public class InvoiceMethods
                     JSONObject existingObject = existingLineItems.get(removedLineItemId);
 
                     sub_total -= (existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity"));
+
+                    tax -= ((existingObject.getFloat("item_cost") * existingObject.getInt("item_quantity") * existingObject.getInt("item_gst"))/100);
 
                     if(invoice_status.equals("SENT"))
                     {
@@ -502,6 +519,7 @@ public class InvoiceMethods
                 Item_json[] insertingLineItems = InvoiceMethods.fetchLineItemsDetails(addLineItemList.toArray(new Item_json[addLineItemList.size()]));
                 InvoiceMethods.storeLineItems(insertingLineItems, invoice_id);
                 sub_total += InvoiceMethods.findSubTotal(insertingLineItems);
+                tax += InvoiceMethods.findTax(insertingLineItems);
 
                 if(invoice_status.equals("SENT"))
                 {
@@ -524,6 +542,11 @@ public class InvoiceMethods
 
             }
 
+            inputJson.put("sub_total", sub_total);
+            inputJson.put("tax", tax);
+
+
+
             if(updateItemHash.size() > 0)
             {
                 InvoiceMethods.updateSentInvoiceItems(updateItemHash);
@@ -544,46 +567,18 @@ public class InvoiceMethods
         }
         catch (SQLException e)
         {
-            return 0;
+            return null;
         }
         catch (JSONException e)
         {
-            return 0;
+            return null;
         }
         catch (Exception e )
         {
-            return 0;
+            return null;
         }
 
-        return sub_total;
-    }
-
-    public static float findUpdatedTax(long invoice_id)
-    {
-        Connection connection = CommonMethods.createConnection();
-
-        float tax = 0;
-
-        try
-        {
-            PreparedStatement statement = connection.prepareStatement("SELECT item_cost, item_quantity, item_gst FROM line_items WHERE invoice_id = ?;");
-            statement.setLong(1, invoice_id);
-
-            ResultSet set = statement.executeQuery();
-
-            while(set.next())
-            {
-                float total = set.getFloat("item_cost") * set.getInt("item_quantity");
-                tax += (total * set.getInt("item_gst"))/100;
-            }
-
-        }
-        catch (SQLException e)
-        {
-            throw new RuntimeException();
-        }
-
-        return tax;
+        return inputJson;
     }
 
     public static int updateInvoice(JSONObject inputJson, String invoice_status)
@@ -658,15 +653,13 @@ public class InvoiceMethods
             }
             if(inputJson.has("line_items"))
             {
-                float newSubTotal = InvoiceMethods.updateLineItems(inputJson.getJSONArray("line_items"), inputJson.getLong("invoice_id"), invoice_status);
+                inputJson = InvoiceMethods.updateLineItems(inputJson, invoice_status);
 
-                if(newSubTotal == 0)
+                if(inputJson == null)
                 {
                     return 0;
                 }
 
-                inputJson.put("sub_total", newSubTotal);
-                inputJson.put("tax", InvoiceMethods.findUpdatedTax(inputJson.getLong("invoice_id")));
                 isTotalChanged = true;
             }
 
@@ -785,7 +778,7 @@ public class InvoiceMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("SELECT invoices.invoice_id , contacts.contact_name as customer_name, invoices.invoice_date , (SELECT salesperson_name FROM salespersons WHERE salesperson_id = invoices.salesperson_id) AS salesperson_name , invoices.subject , invoices.terms_and_conditions , invoices.customer_notes , invoices.sub_total , invoices.tax , invoices.discount , invoices.charges , invoices.total_cost, invoices.payment_made, invoices.written_off_amount, invoices.status , line_items.line_item_id ,line_items.item_id , line_items.item_name , line_items.item_cost , line_items.item_quantity FROM invoices INNER JOIN contacts ON invoices.customer_id = contacts.contact_id INNER JOIN line_items ON invoices.invoice_id = line_items.invoice_id  WHERE invoices.invoice_id = ?;", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+            PreparedStatement statement = connection.prepareStatement("SELECT invoices.invoice_id , contacts.contact_name as customer_name, invoices.invoice_date , (SELECT salesperson_name FROM salespersons WHERE salesperson_id = invoices.salesperson_id) AS salesperson_name , invoices.subject , invoices.terms_and_conditions , invoices.customer_notes , invoices.sub_total , invoices.tax , invoices.discount , invoices.charges , invoices.total_cost, invoices.payment_made, invoices.written_off_amount, invoices.status , line_items.line_item_id ,line_items.item_id , line_items.item_name , line_items.item_cost , line_items.item_quantity, line_items.item_gst FROM invoices INNER JOIN contacts ON invoices.customer_id = contacts.contact_id INNER JOIN line_items ON invoices.invoice_id = line_items.invoice_id  WHERE invoices.invoice_id = ?;", ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 
             statement.setLong(1, invoice_id);
 
@@ -817,6 +810,7 @@ public class InvoiceMethods
                 lineItemObject.addProperty("item_name", rs.getString("item_name"));
                 lineItemObject.addProperty("item_cost", rs.getFloat("item_cost"));
                 lineItemObject.addProperty("item_quantity", rs.getInt("item_quantity"));
+                lineItemObject.addProperty("item_gst", rs.getInt("item_gst"));
                 lineItemObject.addProperty("amount", (rs.getFloat("item_cost") * rs.getInt("item_quantity")));
 
                 jsonArray.add(lineItemObject);
