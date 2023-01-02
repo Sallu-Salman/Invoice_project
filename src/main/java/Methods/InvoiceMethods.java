@@ -1453,7 +1453,7 @@ public class InvoiceMethods
                 balance_due = set.getFloat("total_cost") - set.getFloat("payment_made") - set.getFloat("written_off_amount");
             }
 
-            JSONObject bodyJson = CommonMethods.getBodyJson(request);
+            JSONObject bodyJson = CommonMethods.readBodyJson(request);
 
             if(bodyJson.getFloat("amount_received") <= 0)
             {

@@ -145,20 +145,6 @@ public class CommonMethods
         return id;
     }
 
-    public static JSONObject getBodyJson(HttpServletRequest request) throws IOException
-    {
-
-        BufferedReader reader = request.getReader();
-
-        StringBuffer jb = new StringBuffer();
-        String line = null;
-        try {
-            while ((line = reader.readLine()) != null)
-                jb.append(line);
-        } catch (Exception e) { }
-
-        return new JSONObject(jb.toString());
-    }
 
     public static String refineJson(String jsonString)
     {

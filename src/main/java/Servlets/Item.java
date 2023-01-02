@@ -142,9 +142,7 @@ public class Item extends HttpServlet
         }
 
 
-
-
-        JSONObject jsonObject = CommonMethods.getBodyJson(request);
+        JSONObject jsonObject = CommonMethods.readBodyJson(request);
 
         Item_json item_json = Filters.checkAndLoadItem(jsonObject);
 
