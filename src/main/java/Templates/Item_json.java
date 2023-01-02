@@ -7,5 +7,7 @@ public class Item_json
     public float item_cost;
     public int item_quantity;
 
+    public int item_gst;
+
     public float stock_rate;
 }

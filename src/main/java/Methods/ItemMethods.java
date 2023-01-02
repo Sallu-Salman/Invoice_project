@@ -14,12 +14,13 @@ public class ItemMethods
 
         try
         {
-            PreparedStatement statement = connection.prepareStatement("INSERT INTO items(item_name, item_cost, item_quantity, stock_rate) VALUES (?,?,?,?);", Statement.RETURN_GENERATED_KEYS);
+            PreparedStatement statement = connection.prepareStatement("INSERT INTO items(item_name, item_cost, item_quantity, stock_rate, item_gst) VALUES (?,?,?,?,?);", Statement.RETURN_GENERATED_KEYS);
 
             statement.setString(1, item_json.item_name);
             statement.setFloat(2, item_json.item_cost);
             statement.setInt(3, item_json.item_quantity);
             statement.setFloat(4, item_json.stock_rate);
+            statement.setInt(5, item_json.item_gst);
 
             statement.executeUpdate();
 
@@ -78,6 +79,7 @@ public class ItemMethods
                 item_jsons[i].item_cost = rs.getFloat("item_cost");
                 item_jsons[i].item_quantity = rs.getInt("item_quantity");
                 item_jsons[i].stock_rate = rs.getFloat("stock_rate");
+                item_jsons[i].item_gst = rs.getInt("item_gst");
             }
 
             connection.close();
@@ -111,6 +113,7 @@ public class ItemMethods
                 item_json.item_cost = rs.getFloat("item_cost");
                 item_json.item_quantity = rs.getInt("item_quantity");
                 item_json.stock_rate = rs.getFloat("stock_rate");
+                item_json.item_gst = rs.getInt("item_gst");
             }
 
             connection.close();
@@ -238,6 +241,14 @@ public class ItemMethods
                 new_total_value = (old_total_value/old_stock_rate) * item_json.stock_rate;
 
                 isStockRateChanged = true;
+            }
+
+            if(item_json.item_gst >=0)
+            {
+                CommonMethods.conjunction(key, query);
+
+                query.append(" item_gst = " + item_json.item_gst);
+
             }
 
             query.append(" WHERE item_id = "+item_json.item_id + " ;");

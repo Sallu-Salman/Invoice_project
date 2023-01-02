@@ -36,12 +36,26 @@ public class InvoiceMethods
         return subTotal;
     }
 
+    public static float findTax(Item_json[] line_items)
+    {
+        float tax = 0;
+
+        for(Item_json item_json : line_items)
+        {
+            float total = (item_json.item_cost * item_json.item_quantity);
+
+            tax += ((total * item_json.item_gst)/100);
+        }
+
+        return tax;
+    }
+
     public static Item_json[] fetchLineItemsDetails(Item_json[] line_items)
     {
 
         Connection connection = CommonMethods.createConnection();
 
-        StringBuilder query = new StringBuilder("SELECT item_id, item_name, item_cost, stock_rate FROM items WHERE item_id IN ( ");
+        StringBuilder query = new StringBuilder("SELECT item_id, item_name, item_cost, stock_rate, item_gst FROM items WHERE item_id IN ( ");
         boolean key = true;
         ResultSet set;
 
@@ -89,6 +103,7 @@ public class InvoiceMethods
                     }
 
                     line_items[index].stock_rate = set.getFloat("stock_rate");
+                    line_items[index].item_gst = set.getInt("item_gst");
                 }
 
                 itemIdIndexMapper.remove(set.getLong("item_id"));
@@ -169,7 +184,7 @@ public class InvoiceMethods
 
         Connection connection =  CommonMethods.createConnection();
 
-        StringBuilder query = new StringBuilder("INSERT INTO line_items (invoice_id, item_id, item_name, item_cost, item_quantity, stock_rate) VALUES ");
+        StringBuilder query = new StringBuilder("INSERT INTO line_items (invoice_id, item_id, item_name, item_cost, item_quantity, stock_rate, item_gst) VALUES ");
         boolean key = true;
 
         for(Item_json lineItem : lineItems)
@@ -192,6 +207,8 @@ public class InvoiceMethods
                 values.append(lineItem.item_quantity);
                 values.append(" , ");
                 values.append(lineItem.stock_rate);
+                values.append(" , ");
+                values.append(lineItem.item_gst);
                 values.append(" ) ");
 
                 query.append(values);
@@ -541,6 +558,34 @@ public class InvoiceMethods
         return sub_total;
     }
 
+    public static float findUpdatedTax(long invoice_id)
+    {
+        Connection connection = CommonMethods.createConnection();
+
+        float tax = 0;
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT item_cost, item_quantity, item_gst FROM line_items WHERE invoice_id = ?;");
+            statement.setLong(1, invoice_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while(set.next())
+            {
+                float total = set.getFloat("item_cost") * set.getInt("item_quantity");
+                tax += (total * set.getInt("item_gst"))/100;
+            }
+
+        }
+        catch (SQLException e)
+        {
+            throw new RuntimeException();
+        }
+
+        return tax;
+    }
+
     public static int updateInvoice(JSONObject inputJson, String invoice_status)
     {
 
@@ -621,8 +666,10 @@ public class InvoiceMethods
                 }
 
                 inputJson.put("sub_total", newSubTotal);
+                inputJson.put("tax", InvoiceMethods.findUpdatedTax(inputJson.getLong("invoice_id")));
                 isTotalChanged = true;
             }
+
             if(inputJson.has("sub_total"))
             {
                 key = CommonMethods.conjunction(key, invoiceUpdateQuery);

@@ -56,6 +56,7 @@ public class Invoice extends HttpServlet
         }
 
         invoice_json.sub_total = InvoiceMethods.findSubTotal(line_item_json);
+        invoice_json.tax = InvoiceMethods.findTax(line_item_json);
 
         invoice_json.invoice_id = InvoiceMethods.raiseInvoice(invoice_json);
 
