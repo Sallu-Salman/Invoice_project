@@ -245,6 +245,13 @@ public class ItemMethods
                 isStockRateChanged = true;
             }
 
+            if(item_json.item_tax >= 0)
+            {
+                CommonMethods.conjunction(key, query);
+
+                query.append(" item_tax = " + item_json.item_tax);
+            }
+
             query.append(" WHERE item_id = "+item_json.item_id + " ;");
 
 

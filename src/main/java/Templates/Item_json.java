@@ -7,11 +7,11 @@ public class Item_json
     public float item_cost;
     public int item_quantity;
 
-    public int item_gst;
-
     public long item_tax;
 
     public String item_tax_name;
+
+    public int tax_percentage;
 
     public float stock_rate;
 }
