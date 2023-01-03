@@ -9,5 +9,9 @@ public class Item_json
 
     public int item_gst;
 
+    public long item_tax;
+
+    public String item_tax_name;
+
     public float stock_rate;
 }

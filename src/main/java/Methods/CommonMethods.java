@@ -1,5 +1,7 @@
 package Methods;
 
+import Templates.Item_json;
+import Templates.Tax_json;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -16,13 +18,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class CommonMethods
 {
+
+    static HashMap<Long, Tax_json> tax_details_hash = new HashMap<Long, Tax_json>();
+    static HashMap<Long, ArrayList<Long>> group_tax_details_hash = new HashMap<Long, ArrayList<Long>>();
+
     public static Connection createConnection()
     {
         try
@@ -164,6 +169,152 @@ public class CommonMethods
         }
 
         return jsonObject.toString();
+    }
+
+    public static int getTaxPercentage(long tax_id)
+    {
+
+        if(tax_details_hash.containsKey(tax_id))
+        {
+            Tax_json tax_json = tax_details_hash.get(tax_id);
+
+            return tax_json.tax_percentage;
+        }
+
+        Connection connection = CommonMethods.createConnection();
+        Tax_json tax_json = new Tax_json();
+
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT tax_name, tax_percentage, is_group FROM taxes WHERE tax_id = ?");
+            statement.setLong(1, tax_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                tax_json.tax_name = set.getString("tax_name");
+                tax_json.tax_percentage = set.getInt("tax_percentage");
+                tax_json.is_group = set.getInt("is_group");
+            }
+
+            tax_details_hash.put(tax_id, tax_json);
+
+            return tax_json.tax_percentage;
+
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static ArrayList<Long> getGroupTaxDetails(long tax_id)
+    {
+        if(group_tax_details_hash.containsKey(tax_id))
+        {
+            return group_tax_details_hash.get(tax_id);
+        }
+
+        Connection connection = CommonMethods.createConnection();
+        ArrayList<Long> taxes = new ArrayList<Long>();
+
+        try
+        {
+            PreparedStatement preparedStatement = connection.prepareStatement("SELECT tax_id FROM tax_groups WHERE tax_group_id = ?");
+            preparedStatement.setLong(1, tax_id);
+
+            ResultSet set = preparedStatement.executeQuery();
+
+            while (set.next())
+            {
+                taxes.add(set.getLong("tax_id"));
+            }
+
+            group_tax_details_hash.put(tax_id, taxes);
+
+            return taxes;
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static String getTaxName(long tax_id)
+    {
+        if(tax_details_hash.containsKey(tax_id))
+        {
+            Tax_json tax_json = tax_details_hash.get(tax_id);
+
+            return tax_json.tax_name;
+        }
+
+        Connection connection = CommonMethods.createConnection();
+        Tax_json tax_json = new Tax_json();
+
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT tax_name, tax_percentage, is_group FROM taxes WHERE tax_id = ?");
+            statement.setLong(1, tax_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                tax_json.tax_name = set.getString("tax_name");
+                tax_json.tax_percentage = set.getInt("tax_percentage");
+                tax_json.is_group = set.getInt("is_group");
+            }
+
+            tax_details_hash.put(tax_id, tax_json);
+
+            return tax_json.tax_name;
+
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+    public static int getTaxIsGroup(long tax_id)
+    {
+        if(tax_details_hash.containsKey(tax_id))
+        {
+            Tax_json tax_json = tax_details_hash.get(tax_id);
+
+            return tax_json.is_group;
+        }
+
+        Connection connection = CommonMethods.createConnection();
+        Tax_json tax_json = new Tax_json();
+
+
+        try
+        {
+            PreparedStatement statement = connection.prepareStatement("SELECT tax_name, tax_percentage, is_group FROM taxes WHERE tax_id = ?");
+            statement.setLong(1, tax_id);
+
+            ResultSet set = statement.executeQuery();
+
+            while (set.next())
+            {
+                tax_json.tax_name = set.getString("tax_name");
+                tax_json.tax_percentage = set.getInt("tax_percentage");
+                tax_json.is_group = set.getInt("is_group");
+            }
+
+            tax_details_hash.put(tax_id, tax_json);
+
+            return tax_json.is_group;
+
+        }
+        catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static void sendEmail(long invoice_id, String customer_name, String customer_email, int total_cost, String invoice_date)

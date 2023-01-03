@@ -260,14 +260,6 @@ public class Filters {
             item_json.stock_rate = -1;
         }
 
-        if(jsonObject.has("item_gst"))
-        {
-            item_json.item_gst = jsonObject.getInt("item_gst");
-        }
-        else
-        {
-            item_json.item_gst = -1;
-        }
 
         if(jsonObject.has("item_name"))
         {
