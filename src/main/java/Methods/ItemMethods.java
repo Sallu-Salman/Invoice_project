@@ -79,8 +79,9 @@ public class ItemMethods
                 item_jsons[i].item_cost = rs.getFloat("item_cost");
                 item_jsons[i].item_quantity = rs.getInt("item_quantity");
                 item_jsons[i].stock_rate = rs.getFloat("stock_rate");
+                item_jsons[i].item_tax = rs.getLong("item_tax");
                 item_jsons[i].item_tax_name = rs.getString("tax_name");
-                item_jsons[i].item_tax = rs.getInt("tax_percentage");
+                item_jsons[i].tax_percentage = rs.getInt("tax_percentage");
             }
 
             connection.close();
@@ -114,8 +115,9 @@ public class ItemMethods
                 item_json.item_cost = rs.getFloat("item_cost");
                 item_json.item_quantity = rs.getInt("item_quantity");
                 item_json.stock_rate = rs.getFloat("stock_rate");
+                item_json.item_tax = rs.getLong("item_tax");
                 item_json.item_tax_name = rs.getString("tax_name");
-                item_json.item_tax = rs.getInt("tax_percentage");
+                item_json.tax_percentage = rs.getInt("tax_percentage");
             }
 
             connection.close();

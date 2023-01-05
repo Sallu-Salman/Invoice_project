@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.HashMap;
 
 @WebServlet("/api/invoices/*")
 public class Invoice extends HttpServlet
@@ -58,9 +59,11 @@ public class Invoice extends HttpServlet
         invoice_json.sub_total = InvoiceMethods.findSubTotal(line_item_json);
         invoice_json.tax = InvoiceMethods.findTax(line_item_json);
 
+        HashMap<Long, Float> tax_amount_split = InvoiceMethods.splitInvoiceTax(line_item_json);
+
         invoice_json.invoice_id = InvoiceMethods.raiseInvoice(invoice_json);
 
-        if(invoice_json.invoice_id == -1 )
+        if(invoice_json.invoice_id == -1 || !InvoiceMethods.insertInvoiceTaxDetails(tax_amount_split, invoice_json.invoice_id))
         {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             CommonMethods.responseSender(response, "Something went wrong. Invoice cannot be raised");
